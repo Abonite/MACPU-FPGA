@@ -21,10 +21,10 @@ module decoder (
     // 3: inta enable:  0, disable; 1, enable
     // 4: intb enable:  0, disable; 1, enable
     output  wire    [4:0]   o_io_control_code,
-    // ----------pc control code----------
+    // ----------program counter control code----------
     // 0: pc set:       0, unset; 1, set enable
     // 1: pc output:    0, output disable; 1, output enable;
-    // 2: pc lock:      0, unlock pc; lock pc;
+    // 2: pc lock:      0, unlock pc; 1, lock pc;
     output  wire    [2:0]   o_pc_control_code,
     // ----------decoder control code----------
     // 0: dc data io:           0, input; 1, output
@@ -40,7 +40,7 @@ module decoder (
     // [6:3]:   alu 1st reg selector:   0 - 5, reg A - reg F; F, immediate number;
     // [10:7]:  alu 2nd reg selector:   0 - 5, reg A - reg F; 6, SS; 7, SP;
     // [18:11]: alu operate:
-    //      0, load to the resigiter selected by "1st reg selector";
+    //      0, load or output the resigiter selected by "1st reg selector";
     //      1, add; 2, sub; 3, and; 4, or; 5, not; 6, xor; 7, rand;
     //      8, ror; ...
     //      more instructions code in instructions.toml
@@ -52,10 +52,13 @@ module decoder (
     reg     [2:0]       dc_control_code;
     reg     [18:0]      alu_control_code;
 
-    wire    [15:0]  datatemp;
+    reg     [16:0]      inst, arga, argb;
 
-    wire    [15:0]  data_bus_out;
-    reg     [15:0]  data;
+    wire    [15:0]      datatemp;
+    wire    [15:0]      datamux;
+
+    wire    [15:0]      data_bus_out;
+    reg     [15:0]      data;
 
     assign data_bus_out = data;
 
@@ -75,7 +78,7 @@ module decoder (
             data_in_dl <= datatemp;
     end
 
-    assign datamux = (i_lock || i_data_enable) ? datatemp : dl_data;
+    assign datamux = (i_lock || i_data_enable) ? datatemp : data_in_dl;
 
     parameter
         INST        = 3'h0,
@@ -86,8 +89,10 @@ module decoder (
         WB_ARGB     = 3'h5,
         WRITE_BACK  = 3'h6;
 
+    reg [2:0]   curr_state, next_state;
+
     always @(posedge clk or negedge n_rst) begin
-        if (!rst || i_lock || !i_data_enable) begin
+        if (!n_rst || i_lock || !i_data_enable) begin
             curr_state <= INST;
             next_state <= INST;
         end else begin
@@ -121,117 +126,81 @@ module decoder (
     always @(*) begin
         case (curr_state)
             INST: begin
+                io_control_code = 5'b00011;
+                pc_control_code = 3'b010;
+                dc_control_code = 4'b0100;
+                alu_control_code = 19'b0;
+                inst = datamux;
             end
             ONE_ARG: begin
                 case (inst)
                     `JMP: begin
-                        unset_data;
-                        set_addr(datamux);
-                        read;
-                        pc_set_enable__output_enable__unlock;
-                        unlock_decoder;
-                        decoder_output_address;
-                        decoder_data_unable;
-                        reg_unable;
+                        io_control_code = 5'b00011;
+                        pc_control_code = 3'b110;
+                        dc_control_code = 4'b0110;
+                        alu_control_code = 19'b0;
                     end
                 endcase
             end
             TWO_ARGA: begin
-                unset_addr;
-                unset_addr;
-                read;
-                pc_output_enable__unset__unlock;
-                unlock_decoder;
-                decoder_address_idle;
-                decoder_input_data;
-                reg_unable;
+                io_control_code = 5'b00011;
+                pc_control_code = 3'b010;
+                dc_control_code = 4'b0100;
+                alu_control_code = 19'b0;
+                arga = datamux;
             end
             TWO_ARGB: begin
                 case (inst)
                     `LOAD: begin
-                        unset_addr;
-                        set_data(arg_a);
-                        read;
-                        pc_output_enable__unset__unlock;
-                        unlock_decoder;
-                        decoder_address_idle;
-                        decoder_output_data;
-                        reg_input_data_no_op(datamux[3:0]);
+                        io_control_code = 5'b00011;
+                        pc_control_code = 3'b010;
+                        dc_control_code = 4'b0100;
+                        alu_control_code = {3'b010, arga[3:0], 4'b0000, 8'b0};
                     end
                     `ADD: begin
-                        unset_addr;
-                        unset_data;
-                        read;
-                        pc_output_enable__unset__unlock;
-                        unlock_decoder;
-                        decoder_address_idle;
-                        decoder_output_data;
-                        reg_operate_no_io(arg_a[3:0], datamux[3:0], 8'h00);
+                        io_control_code = 5'b00011;
+                        pc_control_code = 3'b010;
+                        dc_control_code = 4'b0100;
+                        alu_control_code = {3'b000, arga[3:0], datamux[3:0], 8'b1};
                     end
                     `MOV_RR: begin
-                        unset_addr;
-                        unset_data;
-                        read;
-                        pc_output_enable__unset__unlock;
-                        unlock_decoder;
-                        decoder_address_idle;
-                        decoder_output_data;
-                        reg_operate_no_io(arg_a[3:0], datamux[3:0], 8'hFF);
+                        io_control_code = 5'b00011;
+                        pc_control_code = 3'b010;
+                        dc_control_code = 4'b0100;
+                        alu_control_code = {3'b000, arga[3:0], datamux[3:0], 8'hFF};
                     end
                 endcase
             end
             WB_ARGA: begin
-                unset_addr;
-                unset_addr;
-                read;
-                pc_output_enable__unset__unlock;
-                unlock_decoder;
-                decoder_address_idle;
-                decoder_input_data;
-                reg_unable;
+                io_control_code = 5'b00011;
+                pc_control_code = 3'b010;
+                dc_control_code = 4'b0100;
+                alu_control_code = 19'b0;
+                arga = datamux;
             end
             WB_ARGB: begin
-                unset_addr;
-                unset_addr;
-                read;
-                pc_output_enable__unset__unlock;
-                unlock_decoder;
-                decoder_address_idle;
-                decoder_input_data;
-                reg_unable;
+                io_control_code = 5'b00011;
+                pc_control_code = 3'b010;
+                dc_control_code = 4'b0100;
+                alu_control_code = 19'b0;
+                argb = datamux;
             end
             WRITE_BACK: begin
                 case (inst)
                     `MOV_RA: begin
-                        unset_addr;
-                        set_data(arg_b);
-                        write;
-                        pc_lock__unset__no_output;
-                        unlock_decoder;
-                        decoder_output_data;
-                        decoder_data_unable;
-                        reg_output_data_no_op(arg_a[3:0]);
+                        io_control_code = 5'b11011;
+                        pc_control_code = 3'b001;
+                        dc_control_code = 4'b0100;
+                        alu_control_code = {3'b110, arga[3:0], argb[3:0], 8'b0};
                     end
                 endcase
             end
         endcase
     end
 
+    assign o_io_control_code = io_control_code;
+    assign o_pc_control_code = pc_control_code;
+    assign o_dc_control_code = dc_control_code;
+    assign o_alu_control_code = alu_control_code;
 
-
-    assign o_rw_bus = rw;
-
-    assign o_decoder_data_io = decoder_data_enable;
-    assign o_decoder_address_enable = decoder_address_enable;
-    assign o_decoder_data_enable = decoder_data_enable;
-    assign o_decoder_lock = decoder_lock;
-
-    assign o_set_pc_enable = set_pc_enable;
-    assign o_pc_address_enable = pc_address_enable;
-    assign o_pc_lock = pc_lock;
-
-    assign o_reg_data_enable = reg_data_enable;
-    assign o_reg_data_io = reg_data_io;
-    assign o_reg_op_enable = reg_op_enable;
-    assign o_reg_op = reg_op;
 endmodule
