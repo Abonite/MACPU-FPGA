@@ -2,10 +2,9 @@
 
 module decoder (
     input   wire            clk,
-    input   wire            rst,
+    input   wire            n_rst,
 
-    input   wire    [15:0]  i_data_bus,
-    output  wire    [15:0]  o_data_bus,
+    inout   wire    [15:0]  io_data_bus,
     output  wire    [15:0]  o_addr_bus,
 
     //decoder control signals
@@ -28,213 +27,66 @@ module decoder (
     // 2: pc lock:      0, unlock pc; lock pc;
     output  wire    [2:0]   o_pc_control_code,
     // ----------decoder control code----------
-    // 0: dc data io:       0, input; 1, output
-    // 1: dc data enable:   0, disable; 1, enable
-
+    // 0: dc data io:           0, input; 1, output
+    // 1: dc data enable:       0, disable; 1, enable
+    // 2: dc address output:    0, disable; 1, output
+    // 3: dc lock:              0, unlock; 1, lock
+    output  wire    [2:0]   o_dc_control_code,
     // ----------controller control code----------
-
     // ----------alu control code----------
-
-
-    output  wire            o_rw_bus,
-
-    // when need read or write data, the following signals will be change
-    // 因为立即数仅产生于解码器，且解码器不需要输入地址，因此没有i_addr_bus和o_imd_address_io
-    // this signal is used to control whether the decoder receives or outputs data
-    // at next time
-    output  wire            o_decoder_data_io,
-    output  wire            o_decoder_address_enable,
-    output  wire            o_decoder_data_enable,
-    output  wire            o_decoder_lock,
-
-    // when jump, the following signals will be change
-    output  wire            o_set_pc_enable,
-    output  wire            o_pc_address_enable,
-    output  wire            o_pc_lock,
-
-    // when load data in to registers or need alu operate
-    // the following signals will be change
-    output  wire            o_reg_data_enable,
-    output  wire            o_reg_data_io,
-    output  wire    [7:0]   o_reg_selector,
-    output  wire            o_reg_op_enable,
-    output  wire    [7:0]   o_reg_op
+    // 0:       alu reg io:             0, input; 1, output
+    // 1:       alu reg io enable:      0, disable; 1, enable
+    // 2:       alu input type:         0, load to reg; 1, immediate number
+    // [6:3]:   alu 1st reg selector:   0 - 5, reg A - reg F; F, immediate number;
+    // [10:7]:  alu 2nd reg selector:   0 - 5, reg A - reg F; 6, SS; 7, SP;
+    // [18:11]: alu operate:
+    //      0, load to the resigiter selected by "1st reg selector";
+    //      1, add; 2, sub; 3, and; 4, or; 5, not; 6, xor; 7, rand;
+    //      8, ror; ...
+    //      more instructions code in instructions.toml
+    output  wire    [18:0]  o_alu_control_code
     );
 
-    // output register
-    reg [15:0]  data_bus;
-    task set_data(input  [15:0]  data);
-        data_bus = data;
-    endtask
-    task unset_data;
-        data_bus = 16'h0;
-    endtask
+    reg     [4:0]       io_control_code;
+    reg     [2:0]       pc_control_code;
+    reg     [2:0]       dc_control_code;
+    reg     [18:0]      alu_control_code;
 
-    reg [15:0]  addr_bus;
-    task set_addr(input  [15:0]  addr);
-        addr_bus = addr;
-    endtask
-    task unset_addr;
-        addr_bus = 16'h0;
-    endtask
-
-    reg             rw;
-    task read;
-        rw = 1'b0;
-    endtask
-    task write;
-        rw = 1'b1;
-    endtask
-
-    reg             decoder_data_io;
-    reg             decoder_address_enable;
-    reg             decoder_data_enable;
-    reg             decoder_lock;
-    task decoder_output_address;
-        decoder_address_enable = 1'b1;
-    endtask
-    task decoder_address_idle;
-        decoder_address_enable = 1'b0;
-    endtask
-    task decoder_input_data;
-        begin
-            decoder_data_io = 1'b0;
-            decoder_data_enable = 1'b1;
-        end
-    endtask
-    task decoder_output_data;
-        begin
-            decoder_data_io = 1'b1;
-            decoder_data_enable = 1'b1;
-        end
-    endtask
-    task decoder_data_unable;
-        begin
-            decoder_data_io = 1'b0;
-            decoder_data_enable = 1'b0;
-        end
-    endtask
-    task lock_decoder;
-        decoder_lock = 1'b1;
-    endtask
-    task unlock_decoder;
-        decoder_lock = 1'b0;
-    endtask
-
-    reg             set_pc_enable;
-    reg             pc_address_enable;
-    reg             pc_lock;
-    task pc_output_enable__unset__unlock;
-        begin
-            set_pc_enable = 1'b0;
-            pc_address_enable = 1'b1;
-            pc_lock = 1'b0;
-        end
-    endtask
-    task pc_set_enable__output_enable__unlock;
-        begin
-            set_pc_enable = 1'b1;
-            pc_address_enable = 1'b1;
-            pc_lock = 1'b0;
-        end
-    endtask
-    task pc_lock__unset__no_output;
-        begin
-            set_pc_enable = 1'b0;
-            pc_address_enable = 1'b0;
-            pc_lock = 1'b1;
-        end
-    endtask
-    task pc_lock__output_enable__unset;
-        begin
-            set_pc_enable = 1'b0;
-            pc_address_enable = 1'b1;
-            pc_lock = 1'b1;
-        end
-    endtask
-
-    reg             reg_data_enable;
-    reg             reg_data_io;
-    reg    [7:0]    reg_selector;
-    reg             reg_op_enable;
-    reg    [7:0]    reg_op;
-    task reg_input_data_no_op(input   [3:0]   register);
-        begin
-            reg_selector = {register, 4'b0};
-            reg_data_io = 1'b0;
-            reg_data_enable = 1'b1;
-            reg_op_enable = 1'b0;
-            reg_op = 8'h0;
-        end
-    endtask
-    task reg_output_data_no_op(input  [3:0]   register);
-        begin
-            reg_selector = {register, 4'b0};
-            reg_data_io = 1'b1;
-            reg_data_enable = 1'b1;
-            reg_op_enable = 1'b0;
-            reg_op = 8'h0;
-        end
-    endtask
-    task reg_operate_no_io(
-        input   [3:0]   reg_a,
-        input   [3:0]   reg_b,
-        input   [7:0]   opcode
-    );
-        begin
-            reg_op_enable = 1'b1;
-            reg_op = opcode;
-            reg_selector = {reg_a, reg_b};
-            reg_data_io = 1'b0;
-            reg_data_enable = 1'b0;
-        end
-    endtask
-    task reg_unable;
-        begin
-            reg_selector = 8'b0;
-            reg_data_io = 1'b0;
-            reg_data_enable = 1'b0;
-            reg_op_enable = 1'b0;
-            reg_op = 8'h0;
-        end
-    endtask
-
-    // control register
-    reg [15:0]  dl_data;
-
-    reg [15:0]  inst;
-    reg [15:0]  arg_a;
-    reg [15:0]  arg_b;
-
-    reg [2:0]   curr_state;
-    reg [2:0]   next_state;
-
-    parameter
-        INST         = 3'h0,
-        ONE_ARG      = 3'h1,
-        TWO_ARGA     = 3'h2,
-        TWO_ARGB     = 3'h3,
-        WB_ARGA      = 3'h4,
-        WB_ARGB      = 3'h5,
-        WRITE_BACK   = 3'h6;
-
-    wire    [15:0]  datamux;
     wire    [15:0]  datatemp;
 
-    always @(posedge clk or negedge rst) begin
-        dl_data <= !rst ? 16'b0 : i_data_bus;
-    end
+    wire    [15:0]  data_bus_out;
+    reg     [15:0]  data;
+
+    assign data_bus_out = data;
 
     genvar i;
     generate
         for (i = 0; i < 16; i = i + 1) begin
-            bufif0 bufdatar (datatemp[i], i_data_bus, i_data_io);
+            bufif0  bufdatar    (datatemp[i], io_data_bus[i], i_data_io);
+            bufif1  bufdataw    (io_data_bus[i], data_bus_out[i], i_data_io);
         end
     endgenerate
 
+    reg     [15:0]  data_in_dl;
+    always @(posedge clk or negedge n_rst) begin
+        if (!n_rst)
+            data_in_dl <= 16'h0;
+        else
+            data_in_dl <= datatemp;
+    end
+
     assign datamux = (i_lock || i_data_enable) ? datatemp : dl_data;
 
-    always @(posedge clk or negedge rst) begin
+    parameter
+        INST        = 3'h0,
+        ONE_ARG     = 3'h1,
+        TWO_ARGA    = 3'h2,
+        TWO_ARGB    = 3'h3,
+        WB_ARGA     = 3'h4,
+        WB_ARGB     = 3'h5,
+        WRITE_BACK  = 3'h6;
+
+    always @(posedge clk or negedge n_rst) begin
         if (!rst || i_lock || !i_data_enable) begin
             curr_state <= INST;
             next_state <= INST;
@@ -269,14 +121,6 @@ module decoder (
     always @(*) begin
         case (curr_state)
             INST: begin
-                unset_addr;
-                unset_addr;
-                read;
-                pc_output_enable__unset__unlock;
-                unlock_decoder;
-                decoder_address_idle;
-                decoder_input_data;
-                reg_unable;
             end
             ONE_ARG: begin
                 case (inst)
@@ -373,13 +217,7 @@ module decoder (
         endcase
     end
 
-    genvar j;
-    generate
-        for (j = 0; j < 16; j = j + 1) begin
-            bufif1  bufdatao (o_data_bus[j], data_bus[j], i_data_io);
-            bufif1  bufaddr (o_addr_bus[j], addr_bus[j], i_data_io);
-        end
-    endgenerate
+
 
     assign o_rw_bus = rw;
 
