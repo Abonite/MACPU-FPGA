@@ -1,0 +1,153 @@
+[NOP]
+bcode = 0b0000_0000_0000_0000   #00 00
+arg_num = 0
+
+[MOV]
+bcode = 0b0000_0000_0000_0001
+arg_num = 2
+arg_kinds = [
+    ["addr", "regs", "0"],      #00 01
+    ["regs", "regs", "1"],      #00 02
+    ["regs", "addr", "2"]       #00 03
+]
+
+[LOAD]
+bcode = 0b0000_0000_0000_0100   #00 04
+arg_num = 2
+arg_kinds = [
+    ["imdn", "regs"]
+]
+
+[ADD]
+bcode = 0b0000_0001_0000_0000   #01 00
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[SUB]
+bcode = 0b0000_0001_0000_0001   #01 01
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[AND]
+bcode = 0b0000_0001_0000_0010   #01 02
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[OR]
+bcode = 0b0000_0001_0000_0011   #01 03
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[NOT]
+bcode = 0b0000_0001_0000_0100   #01 04
+arg_num = 1
+arg_kinds = [
+    ["regs"]
+]
+
+[XOR]
+bcode = 0b0000_0001_0000_0101   #01 05
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[RAND]
+bcode = 0b0000_0001_0000_0110   #01 06
+arg_num = 1
+arg_kinds = [
+    ["regs"]
+]
+
+[ROR]
+bcode = 0b0000_0001_0000_0111   #01 07
+arg_num = 1
+arg_kinds = [
+    ["regs"]
+]
+
+[RXOR]
+bcode = 0b0000_0001_0000_1000   #01 08
+arg_num = 1
+arg_kinds = [
+    ["regs"]
+]
+
+[LSL]
+bcode = 0b0000_0001_0000_1001   #01 09
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[LSR]
+bcode = 0b0000_0001_0000_1010   #01 0A
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[ASL]
+bcode = 0b0000_0001_0000_1011   #01 0B
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[ASR]
+bcode = 0b0000_0001_0000_1100   #01 0C
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[CSL]
+bcode = 0b0000_0001_0000_1101   #01 0D
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[CSR]
+bcode = 0b0000_0001_0000_1110   #01 0E
+arg_num = 2
+arg_kinds = [
+    ["regs", "regs"]
+]
+
+[INC]
+bcode = 0b0000_0001_0001_0000   #01 10
+arg_num = 1
+arg_kinds = [
+    ["regs"]
+]
+
+[DEC]
+bcode = 0b0000_0001_0001_0001   #01 11
+arg_num = 1
+arg_kinds = [
+    ["regs"]
+]
+
+[JMP]
+bcode = 0b0000_0010_0000_0000   #02 00
+arg_num = 1
+arg_kinds = [
+    ["addr"],
+    ["label"]
+]
+
+[INT]
+bcode = 0b1000_0000_0000_0000   #80 00
+arg_num = 1
+arg_kinds = [
+    ["imdn"]
+]
