@@ -24,11 +24,15 @@ module sim_pycpu_top();
     reg clk;
     reg clk_en;
     reg n_rst;
+    reg int_a;
+    reg int_b;
     
     initial begin
         clk = 1'b0;
         clk_en =1'b0;
         n_rst = 1'b1;
+        int_a = 1'b0;
+        int_b = 1'b0;
     end
     
     initial begin
@@ -42,7 +46,15 @@ module sim_pycpu_top();
         n_rst = 1'b1;
         #2;
         clk_en = 1'b1;
-        #1000000;
+        #3702;
+        int_a = 1'b1;
+        #25;
+        int_a = 1'b0;
+        #4000;
+        int_b = 1'b1;
+        #25;
+        int_b = 1'b0;
+        #10000;
         $finish();
     end
     
@@ -61,8 +73,8 @@ module sim_pycpu_top();
         .clk            (clk),
         .n_rst          (n_rst),
         
-        .i_inta         (),
-        .i_intb         (),
+        .i_inta         (int_a),
+        .i_intb         (int_b),
         .o_rw           (rw),
         
         .o_addr         (addr),
@@ -71,7 +83,7 @@ module sim_pycpu_top();
         .io_lock        (lock)
     );
 
-    bufif0 bufr (lock, 1'b1, rw);
+    bufif0 bufr (lock, 1'b0, rw);
     bufif1 bufw (lock_o, lock, rw);
     always @(posedge clk ) begin
         lock_r <= lock_o;

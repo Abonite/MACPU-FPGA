@@ -1,40 +1,51 @@
 module alu (
-    input           n_rst,
+    input   wire            n_rst,
 
-    input   [7:0]   i_reg_selector,
+    input   wire            io_data,
 
-    input           i_regop,
-    input           i_store_in_reg,
+    input   wire            i_reg_io,
+    input   wire            i_reg_io_enable,
+    input   wire            i_input_type,
+    input   wire    [4:0]   i_1st_alu_reg_selector,
+    input   wire    [4:0]   i_2nd_alu_reg_selector,
+    input   wire    [7:0]   i_alu_operate,
 
-    input   [15:0]  i_data,
-
-    input   [7:0]   i_option,
-
-    output  [63:0]  o_reg_data,
-
-    output  [15:0]  o_flag
+    output  wire    [63:0]  o_reg_data,
+    output  wire    [15:0]  o_flag
     );
+
+    wire    data_in_temp;
+
+    reg     data;
+    wire    data_out;
+    genvar i;
+    generate
+        for (i = 0; i < 16; i = i + 1) begin
+
+        end
+    endgenerate
 
     reg [15:0]  A, B, C, D, E, F, SS, SP;
 
     parameter
-        ADD     = 8'h0,
-        SUB     = 8'h1,
-        AND     = 8'h2,
-        OR      = 8'h3,
-        NOT     = 8'h4,
-        XOR     = 8'h5,
-        RAND    = 8'h6,
-        ROR     = 8'h7,
-        RXOR    = 8'h8,
-        LSL     = 8'h9,
-        LSR     = 8'hA,
-        ASL     = 8'hB,
-        ASR     = 8'hC,
-        CSL     = 8'hD,
-        CSR     = 8'hE,
-        INC     = 8'hF,
-        DEC     = 8'h10,
+        LOAD    = 8'h0,
+        ADD     = 8'h1,
+        SUB     = 8'h2,
+        AND     = 8'h3,
+        OR      = 8'h4,
+        NOT     = 8'h5,
+        XOR     = 8'h6,
+        RAND    = 8'h7,
+        ROR     = 8'h8,
+        RXOR    = 8'h9,
+        LSL     = 8'hA,
+        LSR     = 8'hB,
+        ASL     = 8'hC,
+        ASR     = 8'hD,
+        CSL     = 8'hE,
+        CSR     = 8'hF,
+        INC     = 8'h10,
+        DEC     = 8'h11,
         MOV_RR  = 8'hFF;
 
     parameter
@@ -63,34 +74,11 @@ module alu (
     end
 
     always @(*) begin
-        if (i_store_in_reg) begin
-            case (i_reg_selector[3:0])
-                RA: A = i_data;
-                RB: B = i_data;
-                RC: C = i_data;
-                RD: D = i_data;
-                RE: E = i_data;
-                RF: F = i_data;
-                RSS: SS = i_data;
-                RSP: SP = i_data;
-            endcase
-        end else if (i_regop) begin
-            case ({i_reg_selector, i_option})
-                {RA, RB, ADD}: A = A + B;
-                {RA, RC, ADD}: A = A + C;
-                {RA, RD, ADD}: A = A + D;
-                {RA, RE, ADD}: A = A + E;
-                {RA, RF, ADD}: A = A + F;
-                {RA, RB, SUB}: A = A - B;
-                {RA, RC, SUB}: A = A - C;
-                {RA, RD, SUB}: A = A - D;
-                {RA, RE, SUB}: A = A - E;
-                {RA, RF, SUB}: A = A - F;
-                {RA, RB, MOV_RR}: B = A;
-                {RB, RC, MOV_RR}: C = B;
-                {RC, RA, MOV_RR}: A = C;
-            endcase
-        end
+        case (i_alu_operate)
+            LOAD: begin
+                
+            end
+        endcase
     end
 
     assign o_reg_data = {D, C, B, A};

@@ -1,111 +1,160 @@
 module controller (
-    input           n_rst,
+    input   wire            clk,
+    input   wire            n_rst,
 
-    input           i_rw,
+    input   wire    [15:0]  i_data_bus,
+    output  wire    [15:0]  o_addr_bus,
 
-    input           i_decoder_address_enable,
-    input           i_decoder_data_enable,
-    input           i_decoder_data_io,
+    input   wire            i_inta,
+    input   wire            i_intb,
 
-    input           i_pc_set_enable,
-    input           i_pc_address_enable,
-    input           i_pc_lock,
+    input   wire    [1:0]   i_io_control_code,
+    input   wire    [2:0]   i_pc_control_code,
+    input   wire    [3:0]   i_dc_control_code,
+    input   wire    [5:0]   i_ct_control_code,
+    input   wire    [18:0]  i_alu_control_code,
 
-    input           i_reg_data_enable,
-    input           i_reg_data_io,
-    input   [7:0]   i_reg_selector,
-    input           i_reg_store,
-    input           i_reg_op_enable,
-    input   [7:0]   i_reg_op,
+    output  wire            o_rw,
+    output  wire            o_lock_io,
+    // TODO: inta and intb enable need output?
+    //  - I think no
+    //  - deleted
 
-    input   [63:0]  i_reg_data,
-    input   [15:0]  i_flag,
+    output  wire            o_decoder_data_enable,
+    output  wire            o_decoder_data_io,
+    output  wire            o_decoder_address_output,
+    output  wire            o_decoder_lock,
+    output  wire            o_decoder_interrupt,
 
-    output          o_decoder_data_enable,
-    output          o_decoder_data_io,
-    output          o_decoder_lock,
-
-    output          o_pc_set_enable,
-    output          o_pc_address_enable,
-    output          o_pc_lock
+    output  wire            o_pc_set_enable,
+    output  wire            o_pc_address_enable,
+    output  wire            o_pc_lock
     );
 
-    // decoder control
-    reg             decoder_data_enable;
-    reg             decoder_data_io;
-    task decoder_input;
-        begin
-            decoder_data_enable = 1'b1;
-            decoder_data_io = 1'b0;
-        end
-    endtask
-    task decoder_output;
-        begin
-            decoder_data_enable = 1'b1;
-            decoder_data_io = 1'b1;
-        end
-    endtask
-    task decoder_unable;
-        begin
-            decoder_data_enable = 1'b0;
-            decoder_data_io = 1'b0;
-        end
-    endtask
+    reg [15:0]  inta_address    =   16'hFDA9;
+    reg [15:0]  intb_address    =   16'hFB53;
 
-    reg             decoder_lock;
-    task lock_decoder;
-        decoder_lock = 1'b1;
-    endtask
-    task unlock_decoder;
-        decoder_lock = 1'b0;
-    endtask
+    wire    [15:0]  inta_address_o;
+    wire    [15:0]  intb_address_o;
+
+    assign inta_address_o = inta_address;
+    assign intb_address_o = intb_address;
+
+    reg         inta_enable     =   1'b1;
+    reg         intb_enable     =   1'b1;
+    reg         int_priority    =   1'b0;
+
+    reg [1:0]   privilege_level;
+
+    reg [1:0]   inta_dl;
+    reg [1:0]   intb_dl;
+    wire        inta;
+    wire        intb;
+
+    always @(*) begin
+        inta_dl[0] = i_inta & inta_enable;
+        intb_dl[0] = i_intb & intb_enable;
+    end
+
+    always @(posedge clk) begin
+        inta_dl[1] <= inta_dl[0];
+        intb_dl[1] <= intb_dl[0];
+    end
+
+    assign inta = inta_dl[0] && !inta_dl[1];
+    assign intb = intb_dl[0] && !intb_dl[1];
+
+    always @(negedge n_rst) begin
+        if (!n_rst) begin
+            inta_address    =   16'hFDA9;
+            intb_address    =   16'hFB53;
+            inta_enable     =   1'b1;
+            intb_enable     =   1'b1;
+            int_priority    =   1'b0;
+            inta_dl         =   2'b0;
+            intb_dl         =   2'b0;
+        end
+    end
+
+    // io control
+    reg             rw;
+    reg             lock_io;
 
     // programm counter control
     reg             pc_set_enable;
     reg             pc_address_enable;
     reg             pc_lock;
-    task pc_output_enable__unset__unlock;
-        begin
-            pc_set_enable = 1'b0;
-            pc_address_enable = 1'b1;
-            pc_lock = 1'b0;
-        end
-    endtask
-    task pc_set_enable__output_enable__unlock;
-        begin
-            pc_set_enable = 1'b1;
-            pc_address_enable = 1'b1;
-            pc_lock = 1'b0;
-        end
-    endtask
-    task pc_lock__unset__no_output;
-        begin
-            pc_set_enable = 1'b0;
-            pc_address_enable = 1'b0;
-            pc_lock = 1'b1;
-        end
-    endtask
-    task pc_lock__output_enable__unset;
-        begin
-            pc_set_enable = 1'b0;
-            pc_address_enable = 1'b1;
-            pc_lock = 1'b1;
-        end
-    endtask
-    // io control
-    reg             lock_pin_io;
-    reg             data_pin_io;
-    reg             rw_pin_io;
+
+    // decoder control
+    reg             decoder_data_enable;
+    reg             decoder_data_io;
+    reg             decoder_lock;
+    reg             decoder_address_output;
 
     always @(*) begin
-        if (!n_rst) begin
-            decoder_unable;
-            unlock_decoder;
-            pc_output_enable__unset__unlock;
+        rw = i_io_control_code[0];
+        lock_io = i_io_control_code[1];
+    end
+
+    always @(*) begin
+        pc_set_enable = i_pc_control_code[0];
+        pc_address_enable = i_pc_control_code[1];
+        pc_lock = i_pc_control_code[2];
+    end
+
+    always @(*) begin
+        decoder_data_io = i_dc_control_code[0];
+        decoder_data_enable = i_dc_control_code[1];
+        decoder_address_output = i_dc_control_code[2];
+        decoder_lock = i_dc_control_code[3];
+    end
+
+    always @(*) begin
+        if (i_ct_control_code[3]) begin
+            inta_enable = i_ct_control_code[0];
+            intb_enable = i_ct_control_code[1];
+            int_priority = i_ct_control_code[2];
         end else begin
-            decoder_input;
-            unlock_decoder;
-            pc_output_enable__unset__unlock;
+            inta_enable = inta_enable;
+            intb_enable = intb_enable;
+            int_priority = int_priority;
         end
     end
+
+    always @(*) begin
+        if (i_ct_control_code[5:4] == 2'b00) begin
+            inta_address = inta_address;
+            intb_address = intb_address;
+        end else if (i_ct_control_code[5:4] == 2'b01) begin
+            inta_address = i_data_bus;
+            intb_address = intb_address;
+        end else if (i_ct_control_code[5:4] == 2'b10) begin
+            inta_address = inta_address;
+            intb_address = i_data_bus;
+        end else begin
+            inta_address = 16'hFDA9;
+            intb_address = 16'hFB53;
+        end
+    end
+
+    genvar i;
+    generate
+        for (i = 0; i < 16; i = i + 1) begin
+            bufif1  inta_addr_buf   (o_addr_bus[i], inta_address[i], ((~int_priority & inta) | (inta & ~intb)));
+            bufif1  intb_addr_buf   (o_addr_bus[i], intb_address[i], ((~inta & intb) | (int_priority & intb)));
+        end
+    endgenerate
+
+    assign o_rw = rw;
+    assign o_lock_io = lock_io;
+
+    assign o_decoder_data_enable = decoder_data_enable;
+    assign o_decoder_data_io = decoder_data_io;
+    assign o_decoder_address_output = decoder_address_output;
+    assign o_decoder_lock = decoder_lock;
+    assign o_decoder_interrupt = (!inta && !intb) ? 1'b0 : 1'b1;
+
+    assign o_pc_set_enable = pc_set_enable || ((!inta && !intb) ? 1'b0 : 1'b1);
+    assign o_pc_address_enable = pc_address_enable;
+    assign o_pc_lock = pc_lock;
 endmodule

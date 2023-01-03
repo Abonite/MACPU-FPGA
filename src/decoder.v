@@ -4,6 +4,8 @@ module decoder (
     input   wire            clk,
     input   wire            n_rst,
 
+    input   wire            i_interrupt,
+
     inout   wire    [15:0]  io_data_bus,
     output  wire    [15:0]  o_addr_bus,
 
@@ -16,11 +18,10 @@ module decoder (
 
     // ----------io control code----------
     // 0: rw io:        0, in; 1, out
-    // 1: data io:      0, in; 1, out
-    // 2: lock io:      0, in; 1, out(when out lock must be 1)
-    // 3: inta enable:  0, disable; 1, enable
-    // 4: intb enable:  0, disable; 1, enable
-    output  wire    [4:0]   o_io_control_code,
+    // 1: lock io:      0, in; 1, out(when out lock must be 1)
+    // TODO: is this int wire need be controled by dc?
+    //      - I think they should be in controller
+    output  wire    [1:0]   o_io_control_code,
     // ----------program counter control code----------
     // 0: pc set:       0, unset; 1, set enable
     // 1: pc output:    0, output disable; 1, output enable;
@@ -31,8 +32,18 @@ module decoder (
     // 1: dc data enable:       0, disable; 1, enable
     // 2: dc address output:    0, disable; 1, output
     // 3: dc lock:              0, unlock; 1, lock
-    output  wire    [2:0]   o_dc_control_code,
+    output  wire    [3:0]   o_dc_control_code,
     // ----------controller control code----------
+    // 0:       ct inta enable:             0, disable; 1, enable
+    // 1:       ct intb enable:             0, disable; 1, enable
+    // 2:       ct interrupt priority:      0, a > b; 1, b > a
+    // 3:       ct set int info enable:     0, disable; 1, enable
+    // [5:4]:   ct int address set enable:
+    //      0, disable;
+    //      1, set inta address enable;
+    //      2, set intb address enable;
+    //      3, reset ints address
+    output  wire    [5:0]   o_ct_control_code,
     // ----------alu control code----------
     // 0:       alu reg io:             0, input; 1, output
     // 1:       alu reg io enable:      0, disable; 1, enable
@@ -47,12 +58,14 @@ module decoder (
     output  wire    [18:0]  o_alu_control_code
     );
 
-    reg     [4:0]       io_control_code;
+    reg     [1:0]       io_control_code;
     reg     [2:0]       pc_control_code;
-    reg     [2:0]       dc_control_code;
+    reg     [3:0]       dc_control_code;
+    reg     [5:0]       ct_control_code;
     reg     [18:0]      alu_control_code;
 
     reg     [16:0]      inst, arga, argb;
+    reg     [16:0]      inst_int_save, arga_int_save, argb_int_save;
 
     wire    [15:0]      datatemp;
     wire    [15:0]      datamux;
@@ -91,10 +104,27 @@ module decoder (
 
     reg [2:0]   curr_state, next_state;
 
+    reg [2:0]   curr_state_int_save, next_state_int_save;
+    // soft int 0
+    // hard int 1
+    reg         hs_int_flag = 1'b0;
+
     always @(posedge clk or negedge n_rst) begin
-        if (!n_rst || i_lock || !i_data_enable) begin
+        if (!n_rst) begin
             curr_state <= INST;
             next_state <= INST;
+        end else if (n_rst && i_interrupt) begin
+            curr_state_int_save <= curr_state;
+            next_state_int_save <= next_state;
+            curr_state <= INST;
+            next_state <= INST;
+            hs_int_flag <= 1'b1;
+            inst_int_save <= inst;
+            arga_int_save <= arga;
+            argb_int_save <= argb;
+        end else if ((n_rst & ~i_interrupt & i_data_enable) | (n_rst & ~i_interrupt & i_lock)) begin
+            curr_state <= curr_state;
+            next_state <= next_state;
         end else begin
             curr_state <= next_state;
         end
@@ -126,72 +156,81 @@ module decoder (
     always @(*) begin
         case (curr_state)
             INST: begin
-                io_control_code = 5'b00011;
+                io_control_code = 2'b00;
                 pc_control_code = 3'b010;
-                dc_control_code = 4'b0100;
+                dc_control_code = 4'b0010;
+                ct_control_code = 6'b0;
                 alu_control_code = 19'b0;
                 inst = datamux;
             end
             ONE_ARG: begin
                 case (inst)
                     `JMP: begin
-                        io_control_code = 5'b00011;
-                        pc_control_code = 3'b110;
+                        io_control_code = 2'b00;
+                        pc_control_code = 3'b011;
                         dc_control_code = 4'b0110;
+                        ct_control_code = 6'b0;
                         alu_control_code = 19'b0;
                     end
                 endcase
             end
             TWO_ARGA: begin
-                io_control_code = 5'b00011;
+                io_control_code = 2'b00;
                 pc_control_code = 3'b010;
-                dc_control_code = 4'b0100;
+                dc_control_code = 4'b0010;
+                ct_control_code = 6'b0;
                 alu_control_code = 19'b0;
                 arga = datamux;
             end
             TWO_ARGB: begin
                 case (inst)
                     `LOAD: begin
-                        io_control_code = 5'b00011;
+                        io_control_code = 2'b00;
                         pc_control_code = 3'b010;
-                        dc_control_code = 4'b0100;
-                        alu_control_code = {3'b010, arga[3:0], 4'b0000, 8'b0};
+                        dc_control_code = 4'b0010;
+                        ct_control_code = 6'b0;
+                        alu_control_code = {8'b0, 4'b0000, arga[3:0], 3'b010};
                     end
                     `ADD: begin
-                        io_control_code = 5'b00011;
+                        io_control_code = 2'b11;
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0100;
-                        alu_control_code = {3'b000, arga[3:0], datamux[3:0], 8'b1};
+                        ct_control_code = 6'b0;
+                        alu_control_code = {8'b1, datamux[3:0], arga[3:0], 3'b000};
                     end
                     `MOV_RR: begin
-                        io_control_code = 5'b00011;
+                        io_control_code = 2'b11;
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0100;
-                        alu_control_code = {3'b000, arga[3:0], datamux[3:0], 8'hFF};
+                        ct_control_code = 6'b0;
+                        alu_control_code = {8'hff, datamux[3:0], arga[3:0], 3'b000};
                     end
                 endcase
             end
             WB_ARGA: begin
-                io_control_code = 5'b00011;
+                io_control_code = 2'b00;
                 pc_control_code = 3'b010;
-                dc_control_code = 4'b0100;
+                dc_control_code = 4'b0010;
+                ct_control_code = 6'b0;
                 alu_control_code = 19'b0;
                 arga = datamux;
             end
             WB_ARGB: begin
-                io_control_code = 5'b00011;
+                io_control_code = 2'b00;
                 pc_control_code = 3'b010;
-                dc_control_code = 4'b0100;
+                dc_control_code = 4'b0010;
+                ct_control_code = 6'b0;
                 alu_control_code = 19'b0;
                 argb = datamux;
             end
             WRITE_BACK: begin
                 case (inst)
                     `MOV_RA: begin
-                        io_control_code = 5'b11011;
-                        pc_control_code = 3'b001;
-                        dc_control_code = 4'b0100;
-                        alu_control_code = {3'b110, arga[3:0], argb[3:0], 8'b0};
+                        io_control_code = 2'b01;
+                        pc_control_code = 3'b100;
+                        dc_control_code = 4'b0010;
+                        ct_control_code = 6'b0;
+                        alu_control_code = {8'b0, argb[3:0], arga[3:0], 3'b011};
                     end
                 endcase
             end
@@ -201,6 +240,6 @@ module decoder (
     assign o_io_control_code = io_control_code;
     assign o_pc_control_code = pc_control_code;
     assign o_dc_control_code = dc_control_code;
+    assign o_ct_control_code = ct_control_code;
     assign o_alu_control_code = alu_control_code;
-
 endmodule
