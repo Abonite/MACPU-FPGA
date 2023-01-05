@@ -17,7 +17,8 @@ module pycpu_top (
 
     wire    [15:0]  addr_bus;
     wire    [15:0]  pc_addr;
-    wire    [15:0]  data_bus;
+    wire    [15:0]  io_data_bus;
+    wire    [15:0]  dc_data_dcalu;
     // ----------------------------------------------
     // for all io(rw) signals, it is specified here
     // that 0 is input or read, 1 is output or write
@@ -32,23 +33,36 @@ module pycpu_top (
 
     wire            pc_set_en;
     wire            pc_set_addr;
+    wire            pc_int_en;
+    wire    [15:0]  pc_int_addr;
     wire            pc_lock;
 
+    wire            alu_reg_io;
+    wire            alu_reg_io_en;
+    wire            alu_reg_dc_en;
+    wire    [4:0]   alu_1st_reg;
+    wire    [4:0]   alu_2nd_reg;
+    wire    [7:0]   alu_op;
+
+    wire    [15:0]  flag;
+
     wire            i_lock;
-    wire            o_lock;
 
     wire    [1:0]   io_control_code;
     wire    [2:0]   pc_control_code;
     wire    [3:0]   dc_control_code;
-    wire    [2:0]   ct_control_code;
+    wire    [11:0]  ct_control_code;
     wire    [18:0]  alu_control_code;
 
     program_counter u_pc (
         .clk                        (clk),
-        .rst                        (n_rst),
+        .n_rst                      (n_rst),
 
         .i_set_en                   (pc_set_en),
-        .i_set_address              (addr_bus),
+        .i_set_address              (io_data_bus),
+
+        .i_interrupt_enable         (pc_int_en),
+        .i_interrupt_address        (pc_int_addr),
 
         .i_lock                     (i_lock || pc_lock),
 
@@ -62,7 +76,8 @@ module pycpu_top (
 
         .i_interrupt                    (dc_int),
 
-        .io_data_bus                    (data_bus),
+        .io_data_bus                    (io_data_bus),
+        .o_data_alu                     (dc_data_dcalu),
         .o_addr_bus                     (addr_bus),
 
         .i_data_enable                  (dc_data_en),
@@ -78,31 +93,35 @@ module pycpu_top (
         .o_alu_control_code             (alu_control_code)
     );
 
-    // alu u_alu (
-    //     .n_rst              (n_rst),
-    //     .i_reg_selector     (reg_selector),
+    alu u_alu (
+        .clk                    (clk),
+        .n_rst                  (n_rst),
 
-    //     .i_regop            (regop),
-    //     .i_store_in_reg     (store_in_reg),
+        .io_data                (io_data_bus),
+        .i_data_dc              (dc_data_dcalu),
+        .o_addr                 (addr_bus),
 
-    //     .i_data             (o_data),
+        .i_reg_io               (alu_reg_io),
+        .i_reg_io_enable        (alu_reg_io_en),
+        .i_reg_dc_enable        (alu_reg_dc_en),
+        .i_1st_alu_reg_selector (alu_1st_reg),
+        .i_2nd_alu_reg_selector (alu_2nd_reg),
+        .i_alu_operate          (alu_op),
 
-    //     .i_option           (option),
-
-    //     .o_reg_data         (reg_data),
-
-    //     .o_flag             (flag)
-    // );
+        .o_flag                 (flag)
+    );
 
     controller u_controller (
         .clk                            (clk),
         .n_rst                          (n_rst),
 
-        .i_data_bus                     (data_bus),
-        .o_addr_bus                     (addr_bus),
+        .i_data_bus                     (io_data_bus),
+        .o_interrupt_address            (pc_int_addr),
 
         .i_inta                         (i_inta),
         .i_intb                         (i_intb),
+
+        .i_flag                         (flag),
 
         .i_io_control_code              (io_control_code),
         .i_pc_control_code              (pc_control_code),
@@ -121,23 +140,31 @@ module pycpu_top (
 
         .o_pc_set_enable                (pc_set_en),
         .o_pc_address_enable            (pc_addr_en),
-        .o_pc_lock                      (pc_lock)
+        .o_pc_interrupt_enable          (pc_int_en),
+        .o_pc_lock                      (pc_lock),
+
+        .o_alu_reg_io                   (alu_reg_io),
+        .o_alu_reg_io_enable            (alu_reg_io_en),
+        .o_alu_reg_dc_enable            (alu_reg_dc_en),
+        .o_1st_alu_reg_selector         (alu_1st_reg),
+        .o_2nd_alu_reg_selector         (alu_2nd_reg),
+        .o_alu_operate                  (alu_op)
     );
 
     genvar i;
     generate
         for (i = 0; i < 16; i = i + 1) begin: gen_buf
-            bufif0 bufr     (data_bus[i], io_data[i], o_rw);
-            bufif1 bufw     (io_data[i], data_bus[i], o_rw);
-            pulldown(data_bus[i]);
+            bufif0 bufr     (io_data_bus[i], io_data[i], o_rw);
+            bufif1 bufw     (io_data[i], io_data_bus[i], o_rw);
+            pulldown(io_data_bus[i]);
             pulldown(addr_bus[i]);
             // addr bus output need bufif
-            bufif1 buf_addr_pc    (o_addr[i], pc_addr[i], pc_addr_en);
-            bufif0 buf_addr_bus    (o_addr[i], addr_bus[i], pc_addr_en);
+            bufif1 buf_addr_pc  (o_addr[i], pc_addr[i], pc_addr_en);
+            bufif0 buf_addr_bus (o_addr[i], addr_bus[i], pc_addr_en);
         end
     endgenerate
 
     bufif0 bufrlock (i_lock, io_lock, lock_io);
-    bufif1 bufwlock (io_lock, o_lock, lock_io);
+    bufif1 bufwlock (io_lock, 1'b1, lock_io);
     pulldown(i_lock);
 endmodule

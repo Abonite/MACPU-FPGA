@@ -3,15 +3,17 @@ module controller (
     input   wire            n_rst,
 
     input   wire    [15:0]  i_data_bus,
-    output  wire    [15:0]  o_addr_bus,
+    output  wire    [15:0]  o_interrupt_address,
 
     input   wire            i_inta,
     input   wire            i_intb,
 
+    input   wire    [15:0]  i_flag,
+
     input   wire    [1:0]   i_io_control_code,
     input   wire    [2:0]   i_pc_control_code,
     input   wire    [3:0]   i_dc_control_code,
-    input   wire    [5:0]   i_ct_control_code,
+    input   wire    [11:0]  i_ct_control_code,
     input   wire    [18:0]  i_alu_control_code,
 
     output  wire            o_rw,
@@ -28,11 +30,21 @@ module controller (
 
     output  wire            o_pc_set_enable,
     output  wire            o_pc_address_enable,
-    output  wire            o_pc_lock
+    output  wire            o_pc_interrupt_enable,
+    output  wire            o_pc_lock,
+
+    output  wire            o_alu_reg_io,
+    output  wire            o_alu_reg_io_enable,
+    output  wire            o_alu_reg_dc_enable,
+    output  wire    [4:0]   o_1st_alu_reg_selector,
+    output  wire    [4:0]   o_2nd_alu_reg_selector,
+    output  wire    [7:0]   o_alu_operate
     );
 
     reg [15:0]  inta_address    =   16'hFDA9;
     reg [15:0]  intb_address    =   16'hFB53;
+
+    reg [15:0]  soft_int_address    =   16'h0000;
 
     wire    [15:0]  inta_address_o;
     wire    [15:0]  intb_address_o;
@@ -44,7 +56,7 @@ module controller (
     reg         intb_enable     =   1'b1;
     reg         int_priority    =   1'b0;
 
-    reg [1:0]   privilege_level;
+    reg [1:0]   privilege_level =   2'b00;
 
     reg [1:0]   inta_dl;
     reg [1:0]   intb_dl;
@@ -83,6 +95,7 @@ module controller (
     // programm counter control
     reg             pc_set_enable;
     reg             pc_address_enable;
+    reg             pc_interrupt_enable;
     reg             pc_lock;
 
     // decoder control
@@ -90,6 +103,14 @@ module controller (
     reg             decoder_data_io;
     reg             decoder_lock;
     reg             decoder_address_output;
+
+    // alu control
+    reg             alu_reg_io;
+    reg             alu_reg_io_enable;
+    reg             alu_reg_dc_enable;
+    reg [4:0]       alu_1st_reg_selector;
+    reg [4:0]       alu_2nd_reg_selector;
+    reg [7:0]       alu_operate;
 
     always @(*) begin
         rw = i_io_control_code[0];
@@ -137,13 +158,45 @@ module controller (
         end
     end
 
+    always @(*) begin
+        if (i_ct_control_code[6]) begin
+            case (i_ct_control_code[11:7])
+                5'h0:   soft_int_address = 16'h100;
+            endcase
+        end else begin
+            soft_int_address = 16'h0000;
+        end
+    end
+
+    always @(*) begin
+        alu_reg_io = i_alu_control_code[0];
+        alu_reg_io_enable = i_alu_control_code[1];
+        alu_reg_dc_enable = i_alu_control_code[2];
+        alu_1st_reg_selector = i_alu_control_code[6:3];
+        alu_2nd_reg_selector = i_alu_control_code[10:7];
+        alu_operate = i_alu_control_code[18:11];
+    end
+
     genvar i;
     generate
         for (i = 0; i < 16; i = i + 1) begin
-            bufif1  inta_addr_buf   (o_addr_bus[i], inta_address[i], ((~int_priority & inta) | (inta & ~intb)));
-            bufif1  intb_addr_buf   (o_addr_bus[i], intb_address[i], ((~inta & intb) | (int_priority & intb)));
+            bufif1  inta_addr_buf       (o_interrupt_address[i], inta_address[i], ((~int_priority & inta) | (inta & ~intb)));
+            bufif1  intb_addr_buf       (o_interrupt_address[i], intb_address[i], ((~inta & intb) | (int_priority & intb)));
+            bufif1  soft_int_addr_buf   (o_interrupt_address[i], soft_int_address[i], !((~int_priority & inta) | (inta & ~intb)) && !((~inta & intb) | (int_priority & intb)) && i_ct_control_code[6]);
+            bufif1  noint_addr_buf      (o_interrupt_address[i], 1'b0, !((~int_priority & inta) | (inta & ~intb)) && !((~inta & intb) | (int_priority & intb)) && !i_ct_control_code[6]);
         end
     endgenerate
+
+    always @(*) begin
+        if ((~int_priority & inta) | (inta & ~intb))
+            pc_interrupt_enable = 1'b1;
+        else if ((~inta & intb) | (int_priority & intb))
+            pc_interrupt_enable = 1'b1;
+        else if (i_ct_control_code[6])
+            pc_interrupt_enable = 1'b1;
+        else
+            pc_interrupt_enable = 1'b0;
+    end
 
     assign o_rw = rw;
     assign o_lock_io = lock_io;
@@ -156,5 +209,13 @@ module controller (
 
     assign o_pc_set_enable = pc_set_enable || ((!inta && !intb) ? 1'b0 : 1'b1);
     assign o_pc_address_enable = pc_address_enable;
+    assign o_pc_interrupt_enable = pc_interrupt_enable;
     assign o_pc_lock = pc_lock;
+
+    assign o_alu_reg_io = alu_reg_io;
+    assign o_alu_reg_io_enable = alu_reg_io_enable;
+    assign o_alu_reg_dc_enable = alu_reg_dc_enable;
+    assign o_1st_alu_reg_selector = alu_1st_reg_selector;
+    assign o_2nd_alu_reg_selector = alu_2nd_reg_selector;
+    assign o_alu_operate = alu_operate;
 endmodule

@@ -7,6 +7,7 @@ module decoder (
     input   wire            i_interrupt,
 
     inout   wire    [15:0]  io_data_bus,
+    output  wire    [15:0]  o_data_alu,
     output  wire    [15:0]  o_addr_bus,
 
     //decoder control signals
@@ -43,17 +44,20 @@ module decoder (
     //      1, set inta address enable;
     //      2, set intb address enable;
     //      3, reset ints address
-    output  wire    [5:0]   o_ct_control_code,
+    // 6:       ct soft int effective;
+    // [11:7]   ct soft int number;
+    output  wire    [11:0]   o_ct_control_code,
     // ----------alu control code----------
     // 0:       alu reg io:             0, input; 1, output
     // 1:       alu reg io enable:      0, disable; 1, enable
-    // 2:       alu input type:         0, load to reg; 1, immediate number
-    // [6:3]:   alu 1st reg selector:   0 - 5, reg A - reg F; F, immediate number;
-    // [10:7]:  alu 2nd reg selector:   0 - 5, reg A - reg F; 6, SS; 7, SP;
+    // 2:       alu reg dc enable:      0, disable; 1, enable
+    // [6:3]:   alu 1st reg selector:   1 - 6, reg A - reg F; 7, R; 8, immediate number, 0, null
+    // [10:7]:  alu 2nd reg selector:   1 - 6, reg A - reg F; 7, SS; 8, SP; 0, null
     // [18:11]: alu operate:
-    //      0, load or output the resigiter selected by "1st reg selector";
+    //      0, non op;
     //      1, add; 2, sub; 3, and; 4, or; 5, not; 6, xor; 7, rand;
     //      8, ror; ...
+    //      ff, load, mov or output the resigiter;
     //      more instructions code in instructions.toml
     output  wire    [18:0]  o_alu_control_code
     );
@@ -61,14 +65,18 @@ module decoder (
     reg     [1:0]       io_control_code;
     reg     [2:0]       pc_control_code;
     reg     [3:0]       dc_control_code;
-    reg     [5:0]       ct_control_code;
+    reg     [11:0]      ct_control_code;
     reg     [18:0]      alu_control_code;
 
-    reg     [16:0]      inst, arga, argb;
-    reg     [16:0]      inst_int_save, arga_int_save, argb_int_save;
+    reg     [15:0]      inst, arga, argb;
+    reg     [15:0]      inst_int_save, arga_int_save, argb_int_save;
 
     wire    [15:0]      datatemp;
     wire    [15:0]      datamux;
+
+    reg     [15:0]      addr;
+
+    reg     [15:0]      data_alu;
 
     wire    [15:0]      data_bus_out;
     reg     [15:0]      data;
@@ -78,8 +86,10 @@ module decoder (
     genvar i;
     generate
         for (i = 0; i < 16; i = i + 1) begin
-            bufif0  bufdatar    (datatemp[i], io_data_bus[i], i_data_io);
-            bufif1  bufdataw    (io_data_bus[i], data_bus_out[i], i_data_io);
+            bufif1  bufdatar    (datatemp[i], io_data_bus[i], (!i_data_io && i_data_enable));
+            bufif1  bufdataw    (io_data_bus[i], data_bus_out[i], (i_data_io && i_data_enable));
+            bufif1  bufaddro    (o_addr_bus[i], addr[i], i_address_enable);
+            pulldown(datatemp[i]);
         end
     endgenerate
 
@@ -91,16 +101,17 @@ module decoder (
             data_in_dl <= datatemp;
     end
 
-    assign datamux = (i_lock || i_data_enable) ? datatemp : data_in_dl;
+    assign datamux = i_lock ? data_in_dl : datatemp;
 
     parameter
         INST        = 3'h0,
         ONE_ARG     = 3'h1,
-        TWO_ARGA    = 3'h2,
-        TWO_ARGB    = 3'h3,
-        WB_ARGA     = 3'h4,
-        WB_ARGB     = 3'h5,
-        WRITE_BACK  = 3'h6;
+        IO_ONE_ARG  = 3'h2,
+        TWO_ARGA    = 3'h3,
+        TWO_ARGB    = 3'h4,
+        IO_ARGA     = 3'h5,
+        IO_ARGB     = 3'h6,
+        IO_OP       = 3'h7;
 
     reg [2:0]   curr_state, next_state;
 
@@ -122,7 +133,7 @@ module decoder (
             inst_int_save <= inst;
             arga_int_save <= arga;
             argb_int_save <= argb;
-        end else if ((n_rst & ~i_interrupt & i_data_enable) | (n_rst & ~i_interrupt & i_lock)) begin
+        end else if (n_rst && !i_interrupt && i_lock) begin
             curr_state <= curr_state;
             next_state <= next_state;
         end else begin
@@ -135,21 +146,25 @@ module decoder (
             INST: begin
                 case (datamux)
                     // *INST_INFO_START*
-                    `NOP: next_state = INST;
-                    `LOAD: next_state = TWO_ARGA;
-                    `MOV_RR: next_state = TWO_ARGA;
-                    `MOV_RA: next_state = WB_ARGA;
-                    `ADD: next_state = TWO_ARGA;
-                    `JMP: next_state = ONE_ARG;
+                    `NOP:       next_state  = INST;
+                    `LOAD:      next_state  = TWO_ARGA;
+                    `MOV_RR:    next_state  = TWO_ARGA;
+                    `MOV_RA:    next_state  = IO_ARGA;
+                    `PUSH:      next_state  = IO_ONE_ARG;
+                    `POP:       next_state  = IO_ONE_ARG;
+                    `ADD:       next_state  = TWO_ARGA;
+                    `JMP:       next_state  = ONE_ARG;
+                    `INT:       next_state  = ONE_ARG;
                     // *INST_INFO_END*
                 endcase
             end
-            ONE_ARG: next_state = INST;
-            TWO_ARGA: next_state = TWO_ARGB;
-            TWO_ARGB: next_state = INST;
-            WB_ARGA: next_state = WB_ARGB;
-            WB_ARGB: next_state = WRITE_BACK;
-            WRITE_BACK: next_state = INST;
+            ONE_ARG:    next_state  = INST;
+            IO_ONE_ARG: next_state  = IO_OP;
+            TWO_ARGA:   next_state  = TWO_ARGB;
+            TWO_ARGB:   next_state  = INST;
+            IO_ARGA:    next_state  = IO_ARGB;
+            IO_ARGB:    next_state  = IO_OP;
+            IO_OP:      next_state  = INST;
         endcase
     end
 
@@ -159,18 +174,39 @@ module decoder (
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 6'b0;
+                ct_control_code = 12'b0;
                 alu_control_code = 19'b0;
                 inst = datamux;
+                data_alu = 16'h0;
+                addr = 16'h0;
+            end
+            IO_ONE_ARG: begin
+                io_control_code = 2'b00;
+                pc_control_code = 3'b010;
+                dc_control_code = 4'b0010;
+                ct_control_code = 12'b0;
+                alu_control_code = 19'b0;
+                data_alu = 16'h0;
+                arga = datamux;
+                addr = 16'h0;
             end
             ONE_ARG: begin
                 case (inst)
                     `JMP: begin
                         io_control_code = 2'b00;
                         pc_control_code = 3'b011;
-                        dc_control_code = 4'b0110;
-                        ct_control_code = 6'b0;
-                        alu_control_code = 19'b0;
+                        dc_control_code = 4'b0010;
+                        ct_control_code = 12'b0;
+                        alu_control_code = 19'b00;
+                        data_alu = 16'h0;
+                    end
+                    `INT: begin
+                        io_control_code = 2'b00;
+                        pc_control_code = 3'b010;
+                        dc_control_code = 4'b0010;
+                        ct_control_code = {datamux[4:0], 1'b1, 6'b0};
+                        alu_control_code = 19'b00;
+                        data_alu = 16'h0;
                     end
                 endcase
             end
@@ -178,8 +214,9 @@ module decoder (
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 6'b0;
+                ct_control_code = 12'b0;
                 alu_control_code = 19'b0;
+                data_alu = 16'h0;
                 arga = datamux;
             end
             TWO_ARGB: begin
@@ -188,49 +225,69 @@ module decoder (
                         io_control_code = 2'b00;
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0010;
-                        ct_control_code = 6'b0;
-                        alu_control_code = {8'b0, 4'b0000, arga[3:0], 3'b010};
+                        ct_control_code = 12'b0;
+                        alu_control_code = {8'hff, datamux[3:0], 4'h8, 3'b100};
+                        data_alu = arga;
                     end
                     `ADD: begin
-                        io_control_code = 2'b11;
+                        io_control_code = 2'b00;
                         pc_control_code = 3'b010;
-                        dc_control_code = 4'b0100;
-                        ct_control_code = 6'b0;
-                        alu_control_code = {8'b1, datamux[3:0], arga[3:0], 3'b000};
+                        dc_control_code = 4'b0010;
+                        ct_control_code = 12'b0;
+                        alu_control_code = {8'h1, datamux[3:0], arga[3:0], 3'b000};
+                        data_alu = 16'h0;
                     end
                     `MOV_RR: begin
-                        io_control_code = 2'b11;
+                        io_control_code = 2'b00;
                         pc_control_code = 3'b010;
-                        dc_control_code = 4'b0100;
-                        ct_control_code = 6'b0;
+                        dc_control_code = 4'b0010;
+                        ct_control_code = 12'b0;
                         alu_control_code = {8'hff, datamux[3:0], arga[3:0], 3'b000};
+                        data_alu = 16'h0;
                     end
                 endcase
             end
-            WB_ARGA: begin
+            IO_ARGA: begin
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 6'b0;
+                ct_control_code = 12'b0;
                 alu_control_code = 19'b0;
                 arga = datamux;
             end
-            WB_ARGB: begin
+            IO_ARGB: begin
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 6'b0;
+                ct_control_code = 12'b0;
                 alu_control_code = 19'b0;
                 argb = datamux;
             end
-            WRITE_BACK: begin
+            IO_OP: begin
                 case (inst)
                     `MOV_RA: begin
-                        io_control_code = 2'b01;
+                        io_control_code = 2'b11;
                         pc_control_code = 3'b100;
-                        dc_control_code = 4'b0010;
-                        ct_control_code = 6'b0;
-                        alu_control_code = {8'b0, argb[3:0], arga[3:0], 3'b011};
+                        dc_control_code = 4'b0110;
+                        ct_control_code = 12'b0;
+                        alu_control_code = {8'hfd, 4'h0000, arga[3:0], 3'b011};
+                        addr = argb;
+                    end
+                    `PUSH: begin
+                        io_control_code = 2'b11;
+                        pc_control_code = 3'b100;
+                        dc_control_code = 4'b0000;
+                        ct_control_code = 12'b0;
+                        alu_control_code = {8'hfb, 4'h0, arga[3:0], 3'b011};
+                        data_alu = 16'h0;
+                    end
+                    `POP: begin
+                        io_control_code = 2'b00;
+                        pc_control_code = 3'b100;
+                        dc_control_code = 4'b0000;
+                        ct_control_code = 12'b0;
+                        alu_control_code = {8'hfc, 4'h0, arga[3:0], 3'b010};
+                        data_alu = 16'h0;
                     end
                 endcase
             end
@@ -242,4 +299,5 @@ module decoder (
     assign o_dc_control_code = dc_control_code;
     assign o_ct_control_code = ct_control_code;
     assign o_alu_control_code = alu_control_code;
+    assign o_data_alu = data_alu;
 endmodule

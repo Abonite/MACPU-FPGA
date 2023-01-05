@@ -1,3 +1,7 @@
+# register select:
+# alu 1st reg:   1 - 6, reg A - reg F; 7, R; 8, immediate number, 0, null
+# alu 2nd reg:   1 - 6, reg A - reg F; 7, SS; 8, SP; 0, null
+
 [NOP]
 bcode = 0b0000_0000_0000_0000   #00 00
 arg_num = 0
@@ -143,6 +147,20 @@ arg_num = 1
 arg_kinds = [
     ["addr"],
     ["label"]
+]
+
+[PUSH]
+bcode = 0b0000_0100_0000_0000   #04 00
+arg_num = 1
+arg_kinds = [
+    ["addr"]
+]
+
+[POP]
+bcode = 0b0000_0100_0000_0001   #04 01
+arg_num = 1
+arg_kinds = [
+    ["addr"]
 ]
 
 [INT]

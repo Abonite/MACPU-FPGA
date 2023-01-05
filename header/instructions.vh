@@ -22,4 +22,6 @@
 `define DEC         16'h111
 `define JMP         16'h200
 `define JMP         16'h200
+`define PUSH        16'h400
+`define POP         16'h401
 `define INT         16'h8000
