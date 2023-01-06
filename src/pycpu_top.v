@@ -54,7 +54,7 @@ module pycpu_top (
     wire    [1:0]   io_control_code;
     wire    [2:0]   pc_control_code;
     wire    [3:0]   dc_control_code;
-    wire    [11:0]  ct_control_code;
+    wire    [12:0]  ct_control_code;
     wire    [18:0]  alu_control_code;
 
     program_counter u_pc (

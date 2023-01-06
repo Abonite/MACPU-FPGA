@@ -13,7 +13,7 @@ module controller (
     input   wire    [1:0]   i_io_control_code,
     input   wire    [2:0]   i_pc_control_code,
     input   wire    [3:0]   i_dc_control_code,
-    input   wire    [11:0]  i_ct_control_code,
+    input   wire    [12:0]  i_ct_control_code,
     input   wire    [18:0]  i_alu_control_code,
 
     output  wire            o_rw,

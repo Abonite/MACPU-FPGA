@@ -153,8 +153,8 @@ module alu (
     end
 
     reg [7:0]   reg_i;
-    reg [6:0]   reg_o_db;
-    reg [6:0]   reg_o_ia;
+    reg [8:0]   reg_o_db;
+    reg [8:0]   reg_o_ia;
     reg [6:0]   reg_o_ib;
 
     assign reg_a_i = reg_i[0];
@@ -437,8 +437,8 @@ module alu (
     always @(*) begin
         case (i_alu_operate)
             NO_OP: begin
-                reg_i <= 8'h0;
-                reg_o_db <= 7'h0;
+                reg_i <= 9'h0;
+                reg_o_db <= 9'h0;
                 reg_o_ia <= 7'h0;
                 reg_o_ib <= 7'h0;
                 no_stack_op;

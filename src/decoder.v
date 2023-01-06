@@ -277,7 +277,7 @@ module decoder (
                         pc_control_code = 3'b100;
                         dc_control_code = 4'b0000;
                         ct_control_code = 13'b0;
-                        alu_control_code = {8'hfb, 4'h0, arga[3:0], 3'b011};
+                        alu_control_code = {8'hf9, 4'h0, arga[3:0], 3'b011};
                         data_alu = 16'h0;
                     end
                     `POP: begin
@@ -285,7 +285,7 @@ module decoder (
                         pc_control_code = 3'b100;
                         dc_control_code = 4'b0000;
                         ct_control_code = 13'b0;
-                        alu_control_code = {8'hfc, 4'h0, arga[3:0], 3'b010};
+                        alu_control_code = {8'hfa, 4'h0, arga[3:0], 3'b010};
                         data_alu = 16'h0;
                     end
                     `SAVEPC: begin

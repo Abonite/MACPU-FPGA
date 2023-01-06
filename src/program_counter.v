@@ -25,13 +25,13 @@ module program_counter(
     wire    [15:0]      pc_curr_value;
 
     wire    [15:0]      pc_recovery_value;
+    reg     [15:0]      pc_recovery;
 
     always@(posedge clk or negedge n_rst) begin
         if (!n_rst)
             pc <= 16'h0000;
         else if (i_interrupt_enable) begin
             pc <= i_interrupt_address;
-            pc_save <= pc;
         end else if (!i_set_enable && !i_lock)
             pc <= pc + 16'h0001;
         else if (i_set_enable)
@@ -39,11 +39,22 @@ module program_counter(
         else if (i_lock)
             pc <= pc;
         else if (!i_lock && !i_set_enable && !i_interrupt_enable && i_recovery_enable)
-            pc <= pc_recovery_value;
+            pc <= pc_recovery;
         else
             // if i_set and i_lock are enabled at same time
             // lock pc
             pc <= pc;
+    end
+
+    always @(posedge clk or negedge n_rst) begin
+        if (!n_rst)
+            pc_save <= 16'h0000;
+        else
+            pc_save <= pc;
+    end
+
+    always @(*) begin
+        pc_recovery = i_recovery_enable ? pc_recovery_value : pc_recovery;
     end
 
     genvar i;
