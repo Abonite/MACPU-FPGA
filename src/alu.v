@@ -4,6 +4,9 @@ module alu (
 
     inout   wire    [15:0]  io_data,
     input   wire    [15:0]  i_data_dc,
+    // TODO:
+    //  pc push pop
+    inout   wire    [15:0]  io_data_pc_int_save,
     output  wire    [15:0]  o_addr,
 
     input   wire            i_reg_io,
@@ -12,6 +15,8 @@ module alu (
     input   wire    [4:0]   i_1st_alu_reg_selector,
     input   wire    [4:0]   i_2nd_alu_reg_selector,
     input   wire    [7:0]   i_alu_operate,
+    input   wire            i_interrupt,
+    input   wire            i_recovery_pc,
 
     output  wire    [15:0]  o_flag
     );
@@ -21,12 +26,18 @@ module alu (
     wire    [15:0]  input_a;
     wire    [15:0]  input_b;
 
+    wire    [15:0]  pc_int_save;
+    wire    [15:0]  pc_int_recovery;
+
     genvar i;
     generate
         for (i = 0; i < 16; i = i + 1) begin
-            bufif1  bufioi    (inner_data_bus[i], io_data[i], (!i_reg_io && i_reg_io_enable));
-            bufif1  bufioo    (io_data[i], inner_data_bus[i], (i_reg_io && i_reg_io_enable));
-            bufif1  bufdci    (inner_data_bus[i], i_data_dc[i], i_reg_dc_enable);
+            bufif1  bufioi  (inner_data_bus[i], io_data[i], (!i_reg_io && i_reg_io_enable));
+            bufif1  bufioo  (io_data[i], inner_data_bus[i], (i_reg_io && i_reg_io_enable));
+            bufif1  bufdci  (inner_data_bus[i], i_data_dc[i], i_reg_dc_enable);
+
+            bufif1  bufsave (pc_int_save[i], io_data_pc_int_save[i], i_interrupt);
+            bufif1  bufreco (io_data_pc_int_save[i], pc_int_recovery[i], i_recovery_pc);
         end
     endgenerate
 
@@ -43,6 +54,9 @@ module alu (
 
     reg [15:0]  stack_addr;
 
+    reg [15:0]  pc_save;
+    reg [15:0]  pc_stack;
+
     // 0: overflow
     // 1: zero
     // 2: carry
@@ -57,6 +71,9 @@ module alu (
     wire    [15:0]  F_o;
     wire    [15:0]  R_o;
 
+    wire    [15:0]  pc_sa_o;
+    wire    [15:0]  pc_st_o;
+
     wire    [15:0]  stack_addr_o;
 
     wire    reg_a_i, reg_a_o_db, reg_a_o_ia, reg_a_o_ib;
@@ -68,6 +85,7 @@ module alu (
     wire    reg_r_o_db;
     wire    reg_ss_i;
     wire    reg_sp_i;
+    wire    reg_pc_sa_o_db, reg_pc_st_i, reg_pc_st_o_db;
     wire    reg_imdn_o_ia, reg_imdn_o_ib;
 
     reg     sp_inc;
@@ -147,18 +165,20 @@ module alu (
     assign reg_f_i = reg_i[5];
     assign reg_ss_i = reg_i[6];
     assign reg_sp_i = reg_i[7];
+    assign reg_pc_st_i = reg_i[8];
 
     task ri(input [3:0]   reg_select);
         case (reg_select)
-            4'h0:   reg_i = 8'b00000000;
-            4'h1:   reg_i = 8'b00000001;
-            4'h2:   reg_i = 8'b00000010;
-            4'h3:   reg_i = 8'b00000100;
-            4'h4:   reg_i = 8'b00001000;
-            4'h5:   reg_i = 8'b00010000;
-            4'h6:   reg_i = 8'b00100000;
-            4'h7:   reg_i = 8'b01000000;
-            4'h8:   reg_i = 8'b10000000;
+            4'h0:   reg_i = 9'b000000000;
+            4'h1:   reg_i = 9'b000000001;
+            4'h2:   reg_i = 9'b000000010;
+            4'h3:   reg_i = 9'b000000100;
+            4'h4:   reg_i = 9'b000001000;
+            4'h5:   reg_i = 9'b000010000;
+            4'h6:   reg_i = 9'b000100000;
+            4'h7:   reg_i = 9'b001000000;
+            4'h8:   reg_i = 9'b010000000;
+            4'hf:   reg_i = 9'b100000000;
         endcase
     endtask
 
@@ -169,18 +189,22 @@ module alu (
     assign reg_e_o_db = reg_o_db[4];
     assign reg_f_o_db = reg_o_db[5];
     assign reg_r_o_db = reg_o_db[6];
+    assign reg_pc_sa_o_db = reg_o_db[7];
+    assign reg_pc_st_o_db = reg_o_db[8];
 
     task otdb(input [3:0]   reg_select);
         case (reg_select)
-            4'h0:   reg_o_db = 7'b0000000;
-            4'h1:   reg_o_db = 7'b0000001;
-            4'h2:   reg_o_db = 7'b0000010;
-            4'h3:   reg_o_db = 7'b0000100;
-            4'h4:   reg_o_db = 7'b0001000;
-            4'h5:   reg_o_db = 7'b0010000;
-            4'h6:   reg_o_db = 7'b0100000;
-            4'h7:   reg_o_db = 7'b1000000;
-            4'h8:   reg_o_db = 7'b0000000;
+            4'h0:   reg_o_db = 9'b000000000;
+            4'h1:   reg_o_db = 9'b000000001;
+            4'h2:   reg_o_db = 9'b000000010;
+            4'h3:   reg_o_db = 9'b000000100;
+            4'h4:   reg_o_db = 9'b000001000;
+            4'h5:   reg_o_db = 9'b000010000;
+            4'h6:   reg_o_db = 9'b000100000;
+            4'h7:   reg_o_db = 9'b001000000;
+            4'h8:   reg_o_db = 9'b000000000;
+            4'he:   reg_o_db = 9'b010000000;
+            4'hf:   reg_o_db = 9'b100000000;
         endcase
     endtask
 
@@ -235,6 +259,9 @@ module alu (
     assign E_o = E;
     assign F_o = F;
     assign R_o = R[15:0];
+    assign pc_sa_o = pc_save;
+    assign pc_st_o = pc_stack;
+    assign pc_int_recovery = pc_stack;
     assign SS_o = SS;
     assign SP_o = SP;
 
@@ -270,6 +297,14 @@ module alu (
         SP = reg_sp_i ? inner_data_bus : SP;
     end
 
+    always @(posedge clk or negedge clk) begin
+        pc_save = i_interrupt ? io_data_pc_int_save : pc_save;
+    end
+
+    always @(posedge clk or negedge clk) begin
+        pc_stack = reg_pc_st_i ? inner_data_bus : pc_stack;
+    end
+
     genvar k;
     generate
         for (k = 0; k < 16; k = k + 1) begin
@@ -280,6 +315,8 @@ module alu (
             bufif1  bufEodb (inner_data_bus[k], E_o[k], reg_e_o_db);
             bufif1  bufFodb (inner_data_bus[k], F_o[k], reg_f_o_db);
             bufif1  bufRodb (inner_data_bus[k], R_o[k], reg_r_o_db);
+            bufif1  bufpcsaodb (inner_data_bus[k], pc_sa_o[k], reg_pc_sa_o_db);
+            bufif1  bufpcstodb (inner_data_bus[k], pc_st_o[k], reg_pc_st_o_db);
 
             bufif1  bufAoia (input_a[k], A_o[k], reg_a_o_ia);
             bufif1  bufBoia (input_a[k], B_o[k], reg_b_o_ia);
@@ -322,8 +359,10 @@ module alu (
         CSR         = 8'hF,
         INC         = 8'h10,
         DEC         = 8'h11,
-        PUSH        = 8'hfb,
-        POP         = 8'hfc,
+        PUSH        = 8'hf9,
+        POP         = 8'hfa,
+        PUSH_PC     = 8'hfb,
+        POP_PC      = 8'hfc,
         MOV_RA      = 8'hfd,
         MOV_AR      = 8'hfe,
         LOAD_MOV_RR = 8'hff;
@@ -532,6 +571,20 @@ module alu (
             end
             POP: begin
                 ri(i_1st_alu_reg_selector);
+                otdb(4'b0);
+                otia(4'b0);
+                otib(4'b0);
+                pop_out;
+            end
+            PUSH_PC: begin
+                ri(4'b0);
+                otdb(4'he);
+                otia(4'b0);
+                otib(4'b0);
+                push_in;
+            end
+            POP_PC: begin
+                ri(4'hf);
                 otdb(4'b0);
                 otia(4'b0);
                 otib(4'b0);

@@ -46,7 +46,8 @@ module decoder (
     //      3, reset ints address
     // 6:       ct soft int effective;
     // [11:7]   ct soft int number;
-    output  wire    [11:0]   o_ct_control_code,
+    // 12:      ct recover pc enable;
+    output  wire    [12:0]   o_ct_control_code,
     // ----------alu control code----------
     // 0:       alu reg io:             0, input; 1, output
     // 1:       alu reg io enable:      0, disable; 1, enable
@@ -65,7 +66,7 @@ module decoder (
     reg     [1:0]       io_control_code;
     reg     [2:0]       pc_control_code;
     reg     [3:0]       dc_control_code;
-    reg     [11:0]      ct_control_code;
+    reg     [12:0]      ct_control_code;
     reg     [18:0]      alu_control_code;
 
     reg     [15:0]      inst, arga, argb;
@@ -116,9 +117,6 @@ module decoder (
     reg [2:0]   curr_state, next_state;
 
     reg [2:0]   curr_state_int_save, next_state_int_save;
-    // soft int 0
-    // hard int 1
-    reg         hs_int_flag = 1'b0;
 
     always @(posedge clk or negedge n_rst) begin
         if (!n_rst) begin
@@ -129,7 +127,6 @@ module decoder (
             next_state_int_save <= next_state;
             curr_state <= INST;
             next_state <= INST;
-            hs_int_flag <= 1'b1;
             inst_int_save <= inst;
             arga_int_save <= arga;
             argb_int_save <= argb;
@@ -155,6 +152,8 @@ module decoder (
                     `ADD:       next_state  = TWO_ARGA;
                     `JMP:       next_state  = ONE_ARG;
                     `INT:       next_state  = ONE_ARG;
+                    `SAVEPC:    next_state  = IO_OP;
+                    `RECOPC:    next_state  = IO_OP;
                     // *INST_INFO_END*
                 endcase
             end
@@ -174,7 +173,7 @@ module decoder (
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 12'b0;
+                ct_control_code = 13'b0;
                 alu_control_code = 19'b0;
                 inst = datamux;
                 data_alu = 16'h0;
@@ -184,7 +183,7 @@ module decoder (
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 12'b0;
+                ct_control_code = 13'b0;
                 alu_control_code = 19'b0;
                 data_alu = 16'h0;
                 arga = datamux;
@@ -196,7 +195,7 @@ module decoder (
                         io_control_code = 2'b00;
                         pc_control_code = 3'b011;
                         dc_control_code = 4'b0010;
-                        ct_control_code = 12'b0;
+                        ct_control_code = 13'b0;
                         alu_control_code = 19'b00;
                         data_alu = 16'h0;
                     end
@@ -204,7 +203,7 @@ module decoder (
                         io_control_code = 2'b00;
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0010;
-                        ct_control_code = {datamux[4:0], 1'b1, 6'b0};
+                        ct_control_code = {1'b0, datamux[4:0], 1'b1, 6'b0};
                         alu_control_code = 19'b00;
                         data_alu = 16'h0;
                     end
@@ -214,7 +213,7 @@ module decoder (
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 12'b0;
+                ct_control_code = 13'b0;
                 alu_control_code = 19'b0;
                 data_alu = 16'h0;
                 arga = datamux;
@@ -225,7 +224,7 @@ module decoder (
                         io_control_code = 2'b00;
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0010;
-                        ct_control_code = 12'b0;
+                        ct_control_code = 13'b0;
                         alu_control_code = {8'hff, datamux[3:0], 4'h8, 3'b100};
                         data_alu = arga;
                     end
@@ -233,7 +232,7 @@ module decoder (
                         io_control_code = 2'b00;
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0010;
-                        ct_control_code = 12'b0;
+                        ct_control_code = 13'b0;
                         alu_control_code = {8'h1, datamux[3:0], arga[3:0], 3'b000};
                         data_alu = 16'h0;
                     end
@@ -241,7 +240,7 @@ module decoder (
                         io_control_code = 2'b00;
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0010;
-                        ct_control_code = 12'b0;
+                        ct_control_code = 13'b0;
                         alu_control_code = {8'hff, datamux[3:0], arga[3:0], 3'b000};
                         data_alu = 16'h0;
                     end
@@ -251,7 +250,7 @@ module decoder (
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 12'b0;
+                ct_control_code = 13'b0;
                 alu_control_code = 19'b0;
                 arga = datamux;
             end
@@ -259,7 +258,7 @@ module decoder (
                 io_control_code = 2'b00;
                 pc_control_code = 3'b010;
                 dc_control_code = 4'b0010;
-                ct_control_code = 12'b0;
+                ct_control_code = 13'b0;
                 alu_control_code = 19'b0;
                 argb = datamux;
             end
@@ -269,7 +268,7 @@ module decoder (
                         io_control_code = 2'b11;
                         pc_control_code = 3'b100;
                         dc_control_code = 4'b0110;
-                        ct_control_code = 12'b0;
+                        ct_control_code = 13'b0;
                         alu_control_code = {8'hfd, 4'h0000, arga[3:0], 3'b011};
                         addr = argb;
                     end
@@ -277,7 +276,7 @@ module decoder (
                         io_control_code = 2'b11;
                         pc_control_code = 3'b100;
                         dc_control_code = 4'b0000;
-                        ct_control_code = 12'b0;
+                        ct_control_code = 13'b0;
                         alu_control_code = {8'hfb, 4'h0, arga[3:0], 3'b011};
                         data_alu = 16'h0;
                     end
@@ -285,8 +284,24 @@ module decoder (
                         io_control_code = 2'b00;
                         pc_control_code = 3'b100;
                         dc_control_code = 4'b0000;
-                        ct_control_code = 12'b0;
+                        ct_control_code = 13'b0;
                         alu_control_code = {8'hfc, 4'h0, arga[3:0], 3'b010};
+                        data_alu = 16'h0;
+                    end
+                    `SAVEPC: begin
+                        io_control_code = 2'b11;
+                        pc_control_code = 3'b100;
+                        dc_control_code = 4'b0000;
+                        ct_control_code = 13'b0;
+                        alu_control_code = {8'hfb, 4'h0, 4'h0, 3'b000};
+                        data_alu = 16'h0;
+                    end
+                    `RECOPC: begin
+                        io_control_code = 2'b00;
+                        pc_control_code = 3'b100;
+                        dc_control_code = 4'b0000;
+                        ct_control_code = {1'b1, 12'b0};
+                        alu_control_code = {8'hfb, 4'h0, 4'h0, 3'b000};
                         data_alu = 16'h0;
                     end
                 endcase

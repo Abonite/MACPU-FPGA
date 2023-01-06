@@ -30,7 +30,6 @@ module controller (
 
     output  wire            o_pc_set_enable,
     output  wire            o_pc_address_enable,
-    output  wire            o_pc_interrupt_enable,
     output  wire            o_pc_lock,
 
     output  wire            o_alu_reg_io,
@@ -38,7 +37,10 @@ module controller (
     output  wire            o_alu_reg_dc_enable,
     output  wire    [4:0]   o_1st_alu_reg_selector,
     output  wire    [4:0]   o_2nd_alu_reg_selector,
-    output  wire    [7:0]   o_alu_operate
+    output  wire    [7:0]   o_alu_operate,
+
+    output  wire            o_interrupt_enable,
+    output  wire            o_recovery_enable
     );
 
     reg [15:0]  inta_address    =   16'hFDA9;
@@ -95,7 +97,7 @@ module controller (
     // programm counter control
     reg             pc_set_enable;
     reg             pc_address_enable;
-    reg             pc_interrupt_enable;
+    reg             pc_recovery_enable;
     reg             pc_lock;
 
     // decoder control
@@ -111,6 +113,9 @@ module controller (
     reg [4:0]       alu_1st_reg_selector;
     reg [4:0]       alu_2nd_reg_selector;
     reg [7:0]       alu_operate;
+
+    reg             interrupt_enable;
+    reg             recovery_enable;
 
     always @(*) begin
         rw = i_io_control_code[0];
@@ -161,11 +166,15 @@ module controller (
     always @(*) begin
         if (i_ct_control_code[6]) begin
             case (i_ct_control_code[11:7])
-                5'h0:   soft_int_address = 16'h100;
+                5'h0:   soft_int_address = 16'd29;
             endcase
         end else begin
             soft_int_address = 16'h0000;
         end
+    end
+
+    always @(*) begin
+        recovery_enable = i_ct_control_code[12];
     end
 
     always @(*) begin
@@ -189,13 +198,13 @@ module controller (
 
     always @(*) begin
         if ((~int_priority & inta) | (inta & ~intb))
-            pc_interrupt_enable = 1'b1;
+            interrupt_enable = 1'b1;
         else if ((~inta & intb) | (int_priority & intb))
-            pc_interrupt_enable = 1'b1;
+            interrupt_enable = 1'b1;
         else if (i_ct_control_code[6])
-            pc_interrupt_enable = 1'b1;
+            interrupt_enable = 1'b1;
         else
-            pc_interrupt_enable = 1'b0;
+            interrupt_enable = 1'b0;
     end
 
     assign o_rw = rw;
@@ -209,7 +218,6 @@ module controller (
 
     assign o_pc_set_enable = pc_set_enable || ((!inta && !intb) ? 1'b0 : 1'b1);
     assign o_pc_address_enable = pc_address_enable;
-    assign o_pc_interrupt_enable = pc_interrupt_enable;
     assign o_pc_lock = pc_lock;
 
     assign o_alu_reg_io = alu_reg_io;
@@ -218,4 +226,7 @@ module controller (
     assign o_1st_alu_reg_selector = alu_1st_reg_selector;
     assign o_2nd_alu_reg_selector = alu_2nd_reg_selector;
     assign o_alu_operate = alu_operate;
+
+    assign o_interrupt_enable = interrupt_enable;
+    assign o_recovery_enable = recovery_enable;
 endmodule

@@ -25,3 +25,5 @@
 `define PUSH        16'h400
 `define POP         16'h401
 `define INT         16'h8000
+`define SAVEPC      16'h8001
+`define RECOPC      16'h8002

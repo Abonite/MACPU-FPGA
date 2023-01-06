@@ -169,3 +169,11 @@ arg_num = 1
 arg_kinds = [
     ["imdn"]
 ]
+
+[SAVEPC]
+bcode = 0b1000_0000_0000_0001   #80 01
+arg_num = 0
+
+[RECOPC]
+bcode = 0b1000_0000_0000_0010   #80 02
+arg_num = 0

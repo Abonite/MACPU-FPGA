@@ -33,8 +33,8 @@ module pycpu_top (
 
     wire            pc_set_en;
     wire            pc_set_addr;
-    wire            pc_int_en;
     wire    [15:0]  pc_int_addr;
+    wire    [15:0]  pc_int_save_reco_addr;
     wire            pc_lock;
 
     wire            alu_reg_io;
@@ -43,6 +43,9 @@ module pycpu_top (
     wire    [4:0]   alu_1st_reg;
     wire    [4:0]   alu_2nd_reg;
     wire    [7:0]   alu_op;
+
+    wire            int_en;
+    wire            reco_en;
 
     wire    [15:0]  flag;
 
@@ -58,11 +61,13 @@ module pycpu_top (
         .clk                        (clk),
         .n_rst                      (n_rst),
 
-        .i_set_en                   (pc_set_en),
+        .i_set_enable               (pc_set_en),
         .i_set_address              (io_data_bus),
 
-        .i_interrupt_enable         (pc_int_en),
+        .i_interrupt_enable         (int_en),
         .i_interrupt_address        (pc_int_addr),
+        .i_recovery_enable          (reco_en),
+        .io_interrupt_save_recovery (pc_int_save_reco_addr),
 
         .i_lock                     (i_lock || pc_lock),
 
@@ -99,6 +104,7 @@ module pycpu_top (
 
         .io_data                (io_data_bus),
         .i_data_dc              (dc_data_dcalu),
+        .io_data_pc_int_save    (pc_int_save_reco_addr),
         .o_addr                 (addr_bus),
 
         .i_reg_io               (alu_reg_io),
@@ -107,6 +113,8 @@ module pycpu_top (
         .i_1st_alu_reg_selector (alu_1st_reg),
         .i_2nd_alu_reg_selector (alu_2nd_reg),
         .i_alu_operate          (alu_op),
+        .i_interrupt            (int_en),
+        .i_recovery_pc          (reco_en),
 
         .o_flag                 (flag)
     );
@@ -140,7 +148,6 @@ module pycpu_top (
 
         .o_pc_set_enable                (pc_set_en),
         .o_pc_address_enable            (pc_addr_en),
-        .o_pc_interrupt_enable          (pc_int_en),
         .o_pc_lock                      (pc_lock),
 
         .o_alu_reg_io                   (alu_reg_io),
@@ -148,7 +155,10 @@ module pycpu_top (
         .o_alu_reg_dc_enable            (alu_reg_dc_en),
         .o_1st_alu_reg_selector         (alu_1st_reg),
         .o_2nd_alu_reg_selector         (alu_2nd_reg),
-        .o_alu_operate                  (alu_op)
+        .o_alu_operate                  (alu_op),
+
+        .o_interrupt_enable             (int_en),
+        .o_recovery_enable              (reco_en)
     );
 
     genvar i;
