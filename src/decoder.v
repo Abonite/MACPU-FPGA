@@ -151,7 +151,7 @@ module decoder (
                     `POP:       next_state  = IO_ONE_ARG;
                     `ADD:       next_state  = TWO_ARGA;
                     `JMP:       next_state  = ONE_ARG;
-                    `INT:       next_state  = ONE_ARG;
+                    `INT:       next_state  = IO_OP;
                     `SAVEPC:    next_state  = IO_OP;
                     `RECOPC:    next_state  = IO_OP;
                     // *INST_INFO_END*
@@ -196,14 +196,6 @@ module decoder (
                         pc_control_code = 3'b011;
                         dc_control_code = 4'b0010;
                         ct_control_code = 13'b0;
-                        alu_control_code = 19'b00;
-                        data_alu = 16'h0;
-                    end
-                    `INT: begin
-                        io_control_code = 2'b00;
-                        pc_control_code = 3'b010;
-                        dc_control_code = 4'b0010;
-                        ct_control_code = {1'b0, datamux[4:0], 1'b1, 6'b0};
                         alu_control_code = 19'b00;
                         data_alu = 16'h0;
                     end
@@ -293,7 +285,7 @@ module decoder (
                         pc_control_code = 3'b100;
                         dc_control_code = 4'b0000;
                         ct_control_code = 13'b0;
-                        alu_control_code = {8'hfb, 4'h0, 4'h0, 3'b000};
+                        alu_control_code = {8'hfb, 4'h0, 4'h0, 3'b011};
                         data_alu = 16'h0;
                     end
                     `RECOPC: begin
@@ -301,7 +293,15 @@ module decoder (
                         pc_control_code = 3'b100;
                         dc_control_code = 4'b0000;
                         ct_control_code = {1'b1, 12'b0};
-                        alu_control_code = {8'hfb, 4'h0, 4'h0, 3'b000};
+                        alu_control_code = {8'hfc, 4'h0, 4'h0, 3'b010};
+                        data_alu = 16'h0;
+                    end
+                    `INT: begin
+                        io_control_code = 2'b00;
+                        pc_control_code = 3'b010;
+                        dc_control_code = 4'b0010;
+                        ct_control_code = {1'b0, datamux[4:0], 1'b1, 6'b0};
+                        alu_control_code = 19'b00;
                         data_alu = 16'h0;
                     end
                 endcase

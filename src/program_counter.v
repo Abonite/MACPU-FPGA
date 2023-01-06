@@ -30,15 +30,17 @@ module program_counter(
     always@(posedge clk or negedge n_rst) begin
         if (!n_rst)
             pc <= 16'h0000;
-        else if (i_interrupt_enable) begin
+        else if (i_interrupt_enable)
             pc <= i_interrupt_address;
-        end else if (!i_set_enable && !i_lock)
+        else if (!i_set_enable && !i_lock)
             pc <= pc + 16'h0001;
         else if (i_set_enable)
             pc <= i_set_address;
+        else if (i_lock && i_recovery_enable)
+            pc <= pc_recovery;
         else if (i_lock)
             pc <= pc;
-        else if (!i_lock && !i_set_enable && !i_interrupt_enable && i_recovery_enable)
+        else if (!i_set_enable && !i_interrupt_enable && i_recovery_enable)
             pc <= pc_recovery;
         else
             // if i_set and i_lock are enabled at same time

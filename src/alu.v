@@ -152,7 +152,7 @@ module alu (
             flag[3] <= flag[3];
     end
 
-    reg [7:0]   reg_i;
+    reg [8:0]   reg_i;
     reg [8:0]   reg_o_db;
     reg [8:0]   reg_o_ia;
     reg [6:0]   reg_o_ib;
