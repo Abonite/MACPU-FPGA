@@ -12,7 +12,9 @@ module pycpu_top (
     output  wire    [15:0]  o_addr,
     inout   wire    [15:0]  io_data,
 
-    inout   wire            io_lock
+    inout   wire            io_lock,
+
+    output  wire            o_mmcm_locked
     );
 
     wire    [15:0]  addr_bus;

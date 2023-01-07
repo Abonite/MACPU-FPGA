@@ -5,6 +5,9 @@
 [NOP]
 bcode = 0b0000_0000_0000_0000   #00 00
 arg_num = 0
+io = "read"
+set_pc = false
+
 
 [MOV]
 bcode = 0b0000_0000_0000_0001
