@@ -104,6 +104,57 @@ module decoder (
 
     assign datamux = i_lock ? data_in_dl : datatemp;
 
+    task sm_next_state (
+        input   [16:0]  input_data,
+        output  [15:0]  next_state
+        );
+        begin
+            case (datamux)
+                `NOP:       next_state  = INST;
+                `LOAD:      next_state  = TWO_ARGA;
+                `MOV_RR:    next_state  = TWO_ARGA;
+                `MOV_RA:    next_state  = IO_ARGA;
+                `PUSH:      next_state  = IO_ONE_ARG;
+                `POP:       next_state  = IO_ONE_ARG;
+                `ADD:       next_state  = TWO_ARGA;
+                `JMP:       next_state  = ONE_ARG;
+                `INT:       next_state  = IO_OP;
+                `SAVEPC:    next_state  = IO_OP;
+                `RECOPC:    next_state  = IO_OP;
+            endcase
+        end
+    endtask
+
+    reg [15:0]  init_next_state;
+
+    always @(*) begin
+        sm_next_state(datamux, init_next_state);
+    end
+
+    wire    [15:0]  init_ns;
+
+    assign  init_ns = init_next_state;
+
+    reg [15:0]  prog_next_state;
+    wire    [15:0]  prog_ns;
+
+    assign  prog_ns = prog_next_state;
+
+    wire    [15:0]  next_state_drive;
+
+    reg     drive_control;
+    wire    drive_control_signal;
+
+    assign  drive_control_signal = drive_control;
+
+    genvar k;
+    generate
+        for (k = 0; k < 16; k = k + 1) begin
+            bufif0  next_state_init (next_state_drive[k], init_ns[k], drive_control_signal);
+            bufif1  next_state_prog (next_state_drive[k], prog_ns[k], drive_control_signal);
+        end
+    endgenerate
+
     parameter
         INST        = 3'h0,
         ONE_ARG     = 3'h1,
@@ -119,51 +170,78 @@ module decoder (
     reg [2:0]   curr_state_int_save, next_state_int_save;
 
     always @(posedge clk or negedge n_rst) begin
+        if (!n_rst || (n_rst && i_interrupt)) begin
+            drive_control <= 1'b0;
+        end else begin
+            drive_control <= 1'b1;
+        end
+    end
+
+    always @(*) begin
+        next_state = next_state_drive;
+    end
+
+    always @(posedge clk or negedge n_rst) begin
         if (!n_rst) begin
             curr_state <= INST;
-            next_state <= INST;
         end else if (n_rst && i_interrupt) begin
             curr_state_int_save <= curr_state;
             next_state_int_save <= next_state;
             curr_state <= INST;
-            next_state <= INST;
             inst_int_save <= inst;
             arga_int_save <= arga;
             argb_int_save <= argb;
         end else if (n_rst && !i_interrupt && i_lock) begin
             curr_state <= curr_state;
-            next_state <= next_state;
         end else begin
             curr_state <= next_state;
+        end
+    end
+
+    always @(posedge clk or negedge n_rst) begin
+        if (!n_rst) begin
+            curr_state_int_save <= INST;
+            next_state_int_save <= INST;
+        end else if (n_rst && i_interrupt) begin
+            curr_state_int_save <= curr_state;
+            next_state_int_save <= next_state;
+            inst_int_save <= inst;
+            arga_int_save <= arga;
+            argb_int_save <= argb;
+        end else begin
+            curr_state_int_save <= curr_state_int_save;
+            next_state_int_save <= next_state_int_save;
+        end
+    end
+
+    always @(posedge clk or negedge n_rst) begin
+        if (!n_rst) begin
+            inst_int_save <= 16'b0;
+            arga_int_save <= 16'b0;
+            argb_int_save <= 16'b0;
+        end else if (n_rst && i_interrupt) begin
+            inst_int_save <= inst;
+            arga_int_save <= arga;
+            argb_int_save <= argb;
+        end else begin
+            inst_int_save <= inst_int_save;
+            arga_int_save <= arga_int_save;
+            argb_int_save <= argb_int_save;
         end
     end
 
     always @(*) begin
         case (curr_state)
             INST: begin
-                case (datamux)
-                    // *INST_INFO_START*
-                    `NOP:       next_state  = INST;
-                    `LOAD:      next_state  = TWO_ARGA;
-                    `MOV_RR:    next_state  = TWO_ARGA;
-                    `MOV_RA:    next_state  = IO_ARGA;
-                    `PUSH:      next_state  = IO_ONE_ARG;
-                    `POP:       next_state  = IO_ONE_ARG;
-                    `ADD:       next_state  = TWO_ARGA;
-                    `JMP:       next_state  = ONE_ARG;
-                    `INT:       next_state  = IO_OP;
-                    `SAVEPC:    next_state  = IO_OP;
-                    `RECOPC:    next_state  = IO_OP;
-                    // *INST_INFO_END*
-                endcase
+                sm_next_state(datamux, prog_next_state);
             end
-            ONE_ARG:    next_state  = INST;
-            IO_ONE_ARG: next_state  = IO_OP;
-            TWO_ARGA:   next_state  = TWO_ARGB;
-            TWO_ARGB:   next_state  = INST;
-            IO_ARGA:    next_state  = IO_ARGB;
-            IO_ARGB:    next_state  = IO_OP;
-            IO_OP:      next_state  = INST;
+            ONE_ARG:    prog_next_state  = INST;
+            IO_ONE_ARG: prog_next_state  = IO_OP;
+            TWO_ARGA:   prog_next_state  = TWO_ARGB;
+            TWO_ARGB:   prog_next_state  = INST;
+            IO_ARGA:    prog_next_state  = IO_ARGB;
+            IO_ARGB:    prog_next_state  = IO_OP;
+            IO_OP:      prog_next_state  = INST;
         endcase
     end
 

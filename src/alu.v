@@ -265,43 +265,43 @@ module alu (
     assign SS_o = SS;
     assign SP_o = SP;
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         A = reg_a_i ? inner_data_bus : A;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         B = reg_b_i ? inner_data_bus : B;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         C = reg_c_i ? inner_data_bus : C;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         D = reg_d_i ? inner_data_bus : D;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         E = reg_e_i ? inner_data_bus : E;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         F = reg_f_i ? inner_data_bus : F;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         SS = reg_ss_i ? inner_data_bus : SS;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         SP = reg_sp_i ? inner_data_bus : SP;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         pc_save = i_interrupt ? io_data_pc_int_save : pc_save;
     end
 
-    always @(posedge clk or negedge clk) begin
+    always @(negedge clk) begin
         pc_stack = reg_pc_st_i ? inner_data_bus : pc_stack;
     end
 
@@ -412,7 +412,7 @@ module alu (
             // left shift can make carry flag change
             // right shift can not
             LSL:    R = {input_a[15:0], 1'b0};
-            LSR:    R = {1'b0, input_a[16:1]};
+            LSR:    R = {1'b0, input_a[15:1]};
             ASL:    R = {input_a[15:0], 1'b0};
             ASR:    R = {1'b0, input_a[15], input_a[14:1]};
             CSL:    R = {input_a[14], input_a[14:1], input_a[15]};

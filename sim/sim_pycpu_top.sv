@@ -22,21 +22,19 @@
 
 module sim_pycpu_top();
     reg clk;
-    reg clk_en;
     reg n_rst;
     reg int_a;
     reg int_b;
     
     initial begin
         clk = 1'b0;
-        clk_en =1'b0;
         n_rst = 1'b1;
         int_a = 1'b0;
         int_b = 1'b0;
     end
     
     initial begin
-        forever #10 clk = (~clk) & clk_en;
+        forever #5 clk = ~clk;   // 100MHz
     end
     
     initial begin
@@ -44,11 +42,9 @@ module sim_pycpu_top();
         n_rst = 1'b0;
         #13;
         n_rst = 1'b1;
-        #2;
-        clk_en = 1'b1;
-        #3702;
+        #37020;
         int_a = 1'b1;
-        #25;
+        #250;
         int_a = 1'b0;
         #4000;
         int_b = 1'b1;
@@ -67,18 +63,22 @@ module sim_pycpu_top();
     wire            rw;
     wire            lock;
 
-    pycpu_top u_sim_modue (
-        .clk            (clk),
-        .n_rst          (n_rst),
+    system_top u_sim_modue (
+        .sys_clk            (clk),
+        .sys_n_rst          (n_rst),
         
-        .i_inta         (int_a),
-        .i_intb         (int_b),
-        .o_rw           (rw),
+        .i_pin_inta         (int_a),
+        .i_pin_intb         (int_b),
+        .o_pin_rw           (rw),
         
-        .o_addr         (addr),
-        .io_data        (data),
+        .o_pin_addr         (addr),
+        .io_pin_data        (data),
         
-        .io_lock        (lock)
+        .io_pin_lock        (lock),
+
+        .o_pin_mmcm_locked  (),
+
+        .o_cpu_clk_5m       (cpu_clk)
     );
 
     wire    o_lock;
@@ -113,7 +113,7 @@ module sim_pycpu_top();
     dist_mem_gen_1 u_test_ram (
         .a              (addr),
         .d              (ram_i_data),
-        .clk            (clk),
+        .clk            (cpu_clk),
         .we             (rw),
         .spo            (ram_o_data)
     );
