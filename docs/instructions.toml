@@ -2,21 +2,59 @@
 # alu 1st reg:   1 - 6, reg A - reg F; 7, R; 8, immediate number, 0, null
 # alu 2nd reg:   1 - 6, reg A - reg F; 7, SS; 8, SP; 0, null
 
+[define]
+IN = 0
+OUT = 1
+INT_PRI_AB = 0
+INT_PRI_BA = 1
+INT_ADDR_SET_DISABLE = 0
+INT_ADDR_SET_INTA = 1
+INT_ADDR_SET_INTB = 2
+INT_ADDR_RESET = 2
+INT_NUM_DATAMUX = "datamux[4:0]"
+REG_A = 1
+REG_B = 2
+REG_C = 3
+REG_D = 4
+REG_E = 5
+REG_F = 6
+REG_R = 7
+REG_SS = 7
+REG_SP = 8
+REG_IMDN = 8
+REG_NULL = 0
+
+
 [NOP]
-bcode = 0b0000_0000_0000_0000   #00 00
+base_bcode = 0b0000_0000_0000_0000   #00 00
 arg_num = 0
-io = "read"
-set_pc = false
+
+io = {rw = "IN", lock = "IN"}
+pc = {set = false, out = true, lock = false}
+dc = {data_io = "IN", en = true, addr_o = false, lock = false}
+ct = {inta_en = false, intb_en = false, int_pri = "INT_PRI_AB", set_info = false, set_addr = "INT_ADDR_SET_ENABLE", soft_int_effe = false, soft_int_num = 0, recover_pc = false}
+alu = {direct_io = "IN", direct_io_en = false, dc_io_en = false, rega = "REGNULL", regb = "REGNULL", operate = 0}
 
 
 [MOV]
-bcode = 0b0000_0000_0000_0001
+base_bcode = 0b0000_0000_0000_0001
 arg_num = 2
 arg_kinds = [
     ["addr", "regs", "0"],      #00 01
     ["regs", "regs", "1"],      #00 02
     ["regs", "addr", "2"]       #00 03
 ]
+[MOV.appendinfo]
+# mov data in addr into regiter
+arga = "addr"
+argb = "regs"
+append_code = 0
+io = {rw = "IN", lock = "IN"}
+pc = {set = false, out = true, lock = false}
+dc = {data_io = "IN", en = true, addr_o = false, lock = false}
+ct = {inta_en = false, intb_en = false, int_pri = "INT_PRI_AB", set_info = false, set_addr = "INT_ADDR_SET_ENABLE", soft_int_effe = false, soft_int_num = 0, recover_pc = false}
+alu = {direct_io = "IN", direct_io_en = false, dc_io_en = false, rega = "REGNULL", regb = "REGNULL", operate = 0}
+
 
 [LOAD]
 bcode = 0b0000_0000_0000_0100   #00 04

@@ -1,5 +1,3 @@
-`include "alu_opc.vh"
-
 module alu (
     input   wire            clk,
     input   wire            n_rst,
@@ -342,6 +340,33 @@ module alu (
         end
     endgenerate
 
+    parameter
+        NO_OP       = 8'h0,
+        ADD         = 8'h1,
+        SUB         = 8'h2,
+        AND         = 8'h3,
+        OR          = 8'h4,
+        NOT         = 8'h5,
+        XOR         = 8'h6,
+        RAND        = 8'h7,
+        ROR         = 8'h8,
+        RXOR        = 8'h9,
+        LSL         = 8'hA,
+        LSR         = 8'hB,
+        ASL         = 8'hC,
+        ASR         = 8'hD,
+        CSL         = 8'hE,
+        CSR         = 8'hF,
+        INC         = 8'h10,
+        DEC         = 8'h11,
+        PUSH        = 8'hf9,
+        POP         = 8'hfa,
+        PUSH_PC     = 8'hfb,
+        POP_PC      = 8'hfc,
+        MOV_RA      = 8'hfd,
+        MOV_AR      = 8'hfe,
+        LOAD_MOV_RR = 8'hff;
+
     always @(negedge n_rst) begin
         if (!n_rst) begin
             A <= 16'b0;
@@ -363,37 +388,37 @@ module alu (
 
     always @(*) begin
         case (i_alu_operate)
-            `ADD: begin
+            ADD: begin
                 R = {1'b0, input_a} + {1'b0, input_b};
                 if (((input_a > 0) && (input_b > 0) && (R[15:0] < 0)) || ((input_a < 0) && (input_b < 0) && (R[15:0] > 0)))
                     flag[0] = 1'b1;
                 else
                     flag[0] = 1'b0;
             end
-            `SUB: begin
+            SUB: begin
                 R = {1'b0, input_a} - {1'b0, input_b};
                 if (((input_a < 0) && (input_b > 0) && (R[15:0] > 0)) || ((input_a > 0) && (input_b < 0) && (R[15:0] < 0)))
                     flag[0] = 1'b1;
                 else
                     flag[0] = 1'b0;
             end
-            `AND:    R = {1'b0, input_a & input_b};
-            `OR:     R = {1'b0, input_a | input_b};
-            `NOT:    R = {1'b0, ~input_a};
-            `XOR:    R = {1'b0, input_a ^ input_b};
-            `RAND:   R = {1'b0, & input_a};
-            `ROR:    R = {1'b0, | input_a};
-            `RXOR:   R = {1'b0, ^ input_a};
+            AND:    R = {1'b0, input_a & input_b};
+            OR:     R = {1'b0, input_a | input_b};
+            NOT:    R = {1'b0, ~input_a};
+            XOR:    R = {1'b0, input_a ^ input_b};
+            RAND:   R = {1'b0, & input_a};
+            ROR:    R = {1'b0, | input_a};
+            RXOR:   R = {1'b0, ^ input_a};
             // left shift can make carry flag change
             // right shift can not
-            `LSL:    R = {input_a[15:0], 1'b0};
-            `LSR:    R = {1'b0, input_a[15:1]};
-            `ASL:    R = {input_a[15:0], 1'b0};
-            `ASR:    R = {1'b0, input_a[15], input_a[14:1]};
-            `CSL:    R = {input_a[14], input_a[14:1], input_a[15]};
-            `CSR:    R = {input_a[0], input_a[0], input_a[14:1]};
-            `INC:    R = {1'b0, input_a + 16'b1};
-            `DEC:    R = {1'b0, input_a - 16'b1};
+            LSL:    R = {input_a[15:0], 1'b0};
+            LSR:    R = {1'b0, input_a[15:1]};
+            ASL:    R = {input_a[15:0], 1'b0};
+            ASR:    R = {1'b0, input_a[15], input_a[14:1]};
+            CSL:    R = {input_a[14], input_a[14:1], input_a[15]};
+            CSR:    R = {input_a[0], input_a[0], input_a[14:1]};
+            INC:    R = {1'b0, input_a + 16'b1};
+            DEC:    R = {1'b0, input_a - 16'b1};
             default:    R = R;
         endcase
     end
@@ -411,175 +436,175 @@ module alu (
 
     always @(*) begin
         case (i_alu_operate)
-            `NO_OP: begin
+            NO_OP: begin
                 reg_i <= 9'h0;
                 reg_o_db <= 9'h0;
                 reg_o_ia <= 7'h0;
                 reg_o_ib <= 7'h0;
                 no_stack_op;
             end
-            `ADD: begin
+            ADD: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(i_2nd_alu_reg_selector);
                 no_stack_op;
             end
-            `SUB: begin
+            SUB: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(i_2nd_alu_reg_selector);
                 no_stack_op;
             end
-            `AND: begin
+            AND: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(i_2nd_alu_reg_selector);
                 no_stack_op;
             end
-            `OR: begin
+            OR: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(i_2nd_alu_reg_selector);
                 no_stack_op;
             end
-            `NOT: begin
+            NOT: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `XOR: begin
+            XOR: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `RAND: begin
+            RAND: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `ROR: begin
+            ROR: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `RXOR: begin
+            RXOR: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `LSL: begin
+            LSL: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `LSR: begin
+            LSR: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `ASL: begin
+            ASL: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `ASR: begin
+            ASR: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `CSL: begin
+            CSL: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `CSR: begin
+            CSR: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `INC: begin
+            INC: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `DEC: begin
+            DEC: begin
                 ri(4'b0);
                 otdb(4'b0);
                 otia(i_1st_alu_reg_selector);
                 otib(4'b0);
                 no_stack_op;
             end
-            `PUSH: begin
+            PUSH: begin
                 ri(4'b0);
                 otdb(i_1st_alu_reg_selector);
                 otia(4'b0);
                 otib(4'b0);
                 push_in;
             end
-            `POP: begin
+            POP: begin
                 ri(i_1st_alu_reg_selector);
                 otdb(4'b0);
                 otia(4'b0);
                 otib(4'b0);
                 pop_out;
             end
-            `SAVEPC: begin
+            PUSH_PC: begin
                 ri(4'b0);
                 otdb(4'he);
                 otia(4'b0);
                 otib(4'b0);
                 push_in;
             end
-            `RECOPC: begin
+            POP_PC: begin
                 ri(4'hf);
                 otdb(4'b0);
                 otia(4'b0);
                 otib(4'b0);
                 pop_out;
             end
-            `MOV_RA: begin
+            MOV_RA: begin
                 ri(4'b0);
                 otdb(i_1st_alu_reg_selector);
                 otia(4'b0);
                 otib(4'b0);
                 no_stack_op;
             end
-            `MOV_AR: begin
+            MOV_AR: begin
                 ri(i_2nd_alu_reg_selector);
                 otdb(4'b0);
                 otia(4'b0);
                 otib(4'b0);
                 no_stack_op;
             end
-            `LOAD_MOV_RR: begin
+            LOAD_MOV_RR: begin
                 ri(i_2nd_alu_reg_selector);
                 otdb(i_1st_alu_reg_selector);
                 otia(4'b0);
