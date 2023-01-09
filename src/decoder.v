@@ -151,8 +151,8 @@ module decoder (
                 `PUSH:    next_state    =    IO_ONE_ARG;
                 `POP:     next_state    =    IO_ONE_ARG;
                 `INT:     next_state    =    IO_OP;
-                `SAVEPC:  next_state    =    INST;
-                `RECOPC:  next_state    =    INST;
+                `SAVEPC:  next_state    =    IO_OP;
+                `RECOPC:  next_state    =    IO_OP;
                 default: next_state = 16'h0;
             endcase
         end
@@ -337,7 +337,7 @@ module decoder (
                         pc_control_code = 3'b010;
                         dc_control_code = 4'b0010;
                         ct_control_code = {1'b0, 5'b0, 1'b0, 2'b00, 4'b0000};
-                        alu_control_code = {inst[7:0], 4'h0, datamux[3:0], 3'b010};
+                        alu_control_code = {inst[7:0], datamux[3:0], 4'h0, 3'b100};
                         addr = 16'b0;
                         data_alu = arga;
                     end
@@ -604,52 +604,67 @@ module decoder (
             end
             IO_OP: begin
                 case (inst)
+                    `MOV_AR: begin
+                        io_control_code = 2'b00;
+                        pc_control_code = 3'b100;
+                        dc_control_code = 4'b0100;
+                        ct_control_code = {1'b0, 5'b0, 1'b0, 2'b00, 4'b0000};
+                        alu_control_code = {inst[7:0], 4'h0, argb[3:0], 3'b010};
+                        addr = arga;
+                        data_alu = 16'h0;
+                    end
                     `MOV_RA: begin
                         io_control_code = 2'b11;
                         pc_control_code = 3'b100;
-                        dc_control_code = 4'b0110;
-                        ct_control_code = 13'b0;
-                        alu_control_code = {8'hfd, 4'h0000, arga[3:0], 3'b011};
+                        dc_control_code = 4'b0100;
+                        ct_control_code = {1'b0, 5'b0, 1'b0, 2'b00, 4'b0000};
+                        alu_control_code = {inst[7:0], 4'h0, arga[3:0], 3'b011};
                         addr = argb;
+                        data_alu = 16'h0;
                     end
                     `PUSH: begin
                         io_control_code = 2'b11;
                         pc_control_code = 3'b100;
-                        dc_control_code = 4'b0000;
-                        ct_control_code = 13'b0;
-                        alu_control_code = {8'hf9, 4'h0, arga[3:0], 3'b011};
+                        dc_control_code = 4'b0010;
+                        ct_control_code = {1'b0, 5'b0, 1'b0, 2'b00, 4'b0000};
+                        alu_control_code = {inst[7:0], 4'h0, arga[3:0], 3'b011};
+                        addr = 16'b0;
                         data_alu = 16'h0;
                     end
                     `POP: begin
                         io_control_code = 2'b00;
                         pc_control_code = 3'b100;
-                        dc_control_code = 4'b0000;
-                        ct_control_code = 13'b0;
-                        alu_control_code = {8'hfa, 4'h0, arga[3:0], 3'b010};
+                        dc_control_code = 4'b0010;
+                        ct_control_code = {1'b0, 5'b0, 1'b0, 2'b00, 4'b0000};
+                        alu_control_code = {inst[7:0], 4'h0, arga[3:0], 3'b010};
+                        addr = 16'b0;
+                        data_alu = 16'h0;
+                    end
+                    `INT: begin
+                        io_control_code = 2'b00;
+                        pc_control_code = 3'b011;
+                        dc_control_code = 4'b0010;
+                        ct_control_code = {1'b0, datamux[4:0], 1'b1, 2'b00, 4'b0000};
+                        alu_control_code = {8'b0, 4'h0, 4'h0, 3'b000};
+                        addr = 16'b0;
                         data_alu = 16'h0;
                     end
                     `SAVEPC: begin
                         io_control_code = 2'b11;
                         pc_control_code = 3'b100;
-                        dc_control_code = 4'b0000;
-                        ct_control_code = 13'b0;
-                        alu_control_code = {8'hfb, 4'h0, 4'h0, 3'b011};
+                        dc_control_code = 4'b0010;
+                        ct_control_code = {1'b0, 5'b0, 1'b0, 2'b00, 4'b0000};
+                        alu_control_code = {inst[7:0], 4'h0, 4'h0, 3'b011};
+                        addr = 16'b0;
                         data_alu = 16'h0;
                     end
                     `RECOPC: begin
                         io_control_code = 2'b00;
                         pc_control_code = 3'b100;
-                        dc_control_code = 4'b0000;
-                        ct_control_code = {1'b1, 12'b0};
-                        alu_control_code = {8'hfc, 4'h0, 4'h0, 3'b010};
-                        data_alu = 16'h0;
-                    end
-                    `INT: begin
-                        io_control_code = 2'b00;
-                        pc_control_code = 3'b010;
                         dc_control_code = 4'b0010;
-                        ct_control_code = {1'b0, datamux[4:0], 1'b1, 6'b0};
-                        alu_control_code = 19'b00;
+                        ct_control_code = {1'b1, 5'b0, 1'b0, 2'b00, 4'b0000};
+                        alu_control_code = {inst[7:0], 4'h0, 4'h0, 3'b010};
+                        addr = 16'b0;
                         data_alu = 16'h0;
                     end
                 endcase

@@ -1,6 +1,6 @@
 `define NO_OP       8'b0
 `define	MOV_AR      8'b1
-`define	MOV_RR_LOAD 8'b100
+`define	LOAD_MOV_RR 8'b100
 `define	MOV_RA      8'b11
 `define	ADD         8'b10000
 `define	SUB         8'b10001
@@ -21,5 +21,5 @@
 `define	DEC         8'b100000
 `define	PUSH        8'b1010000
 `define	POP         8'b1010001
-`define	SAVEPC      8'b10000000
-`define	RECOPC      8'b10000000
+`define	SAVEPC      8'b10000001
+`define	RECOPC      8'b10000010
