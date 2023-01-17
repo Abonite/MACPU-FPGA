@@ -1,4 +1,5 @@
 module ddr3 (
+    input       i_write_data
 );
 
     `ifdef SKIP_CALIB
