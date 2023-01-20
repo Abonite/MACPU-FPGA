@@ -19,9 +19,9 @@ module mcu_top (
 );
 
     // ROM:                                 0x0000_0000 -> 0x0000_0FFF,         4k x 16bit
-    // program cache for program segments(pcps):    dram    256 x 16bit
-    // data cache for program segments(dcps):       fifo    64 x 32bit
+    // program cache for program segments(pcps):    dram    256 x 48bit
     // data segment cache(dsc):                     dram    128 x 16bit
+    // L2 cache:                                    bram    4096 x 16bit
     // DDR:                                 0x1000_0000 -> 0x1800_0000,         128M x 16bit
 
     // Currently, the real address offset read by the cpu core
