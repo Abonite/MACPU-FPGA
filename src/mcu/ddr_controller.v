@@ -8,6 +8,7 @@ module ddr3 #(
 (
     input                                       clk_333M,
     input                                       clk_166M66,
+    input                                       clk_170M,
     input                                       clk_200M,
 
     input                                       mcu_sys_rst_n,
