@@ -82,7 +82,7 @@ module L2_cache (
     always @(*) begin
         if (l1cache_operating_address[11:3] == ddr_operating_address)
             l1ddr_rw_confilicts = 1'b1;
-        else if (({9{i_l1_burst_address_enable}} & i_l1_burst_address[11:3]) == ddr_operating_address)
+        else if (i_l1_burst_address_enable && (i_l1_burst_address[11:3] == ddr_operating_address))
             l1ddr_rw_confilicts = 1'b1;
         else
             l1ddr_rw_confilicts = 1'b0;
