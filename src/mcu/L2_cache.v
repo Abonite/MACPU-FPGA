@@ -9,11 +9,11 @@ module L2_cache (
     input           i_l1_burst_address_enable,
     input           i_l1_operate_enable,
     input           i_l1_rw,
-    inout           io_l1_data_bus,
+    inout   [15:0]  io_l1_data_bus,
 
     input           i_ddr_operate_enable,
     input           i_ddr_rw,
-    input           io_ddr_data_bus
+    input   [127:0] io_ddr_data_bus
 );
 
     wire    [15:0]  l1cache_read_bus;
@@ -27,8 +27,14 @@ module L2_cache (
         for (i = 0; i < 16; i = i + 1) begin
             bufif1  l1writel2   (l1cache_write_bus[i], io_l1_data_bus[i], i_l1_rw && i_l1_operate_enable);
             bufif1  l1readl2    (io_l1_data_bus[i], l1cache_read_bus[i], !i_l1_rw && i_l1_operate_enable);
-            bufif1  ddrwritel2  (ddr_write_bus[i], io_ddr_data_bus[i], i_ddr_rw && i_ddr_operate_enable);
-            bufif1  ddrreadl2   (io_ddr_data_bus[i], ddr_write_bus[i], !i_ddr_rw && i_ddr_operate_enable);
+        end
+    endgenerate
+
+    genvar j;
+    generate
+        for (j = 0; j < 128; j = j + 1) begin
+            bufif1  ddrwritel2  (ddr_write_bus[j], io_ddr_data_bus[j], i_ddr_rw && i_ddr_operate_enable);
+            bufif1  ddrreadl2   (io_ddr_data_bus[j], ddr_write_bus[j], !i_ddr_rw && i_ddr_operate_enable);
         end
     endgenerate
 
