@@ -13,7 +13,7 @@ module L2_cache (
 
     input           i_ddr_operate_enable,
     input           i_ddr_rw,
-    input   [127:0] io_ddr_data_bus
+    inout   [127:0] io_ddr_data_bus
 );
 
     wire    [15:0]  l1cache_read_bus;
