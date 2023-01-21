@@ -1,6 +1,5 @@
 module L2_cache (
     input           clk_166M66,
-    input           mcu_sys_rst_n,
 
     output  [11:0]  o_l2_unread_size,
     output          o_l1ddr_rw_confilicts,
@@ -45,7 +44,6 @@ module L2_cache (
     reg         l2cache_full;
     reg         l2cache_empty;
 
-    // TODO: how to judge if the l1 op addr is in ddr op addr
     reg         l1ddr_rw_confilicts;
 
     always @(*) begin
