@@ -104,6 +104,16 @@ module decoder (
 
     assign datamux = i_lock ? data_in_dl : datatemp;
 
+    parameter
+        INST        = 3'h0,
+        ONE_ARG     = 3'h1,
+        IO_ONE_ARG  = 3'h2,
+        TWO_ARGA    = 3'h3,
+        TWO_ARGB    = 3'h4,
+        IO_ARGA     = 3'h5,
+        IO_ARGB     = 3'h6,
+        IO_OP       = 3'h7;
+
     task sm_next_state (
         input   [16:0]  input_data,
         output  [15:0]  next_state
@@ -187,16 +197,6 @@ module decoder (
             bufif1  next_state_prog (next_state_drive[k], prog_ns[k], drive_control_signal);
         end
     endgenerate
-
-    parameter
-        INST        = 3'h0,
-        ONE_ARG     = 3'h1,
-        IO_ONE_ARG  = 3'h2,
-        TWO_ARGA    = 3'h3,
-        TWO_ARGB    = 3'h4,
-        IO_ARGA     = 3'h5,
-        IO_ARGB     = 3'h6,
-        IO_OP       = 3'h7;
 
     reg [2:0]   curr_state, next_state;
 

@@ -1,8 +1,11 @@
 module L2_cache (
     input           clk_166M66,
+    input           mcu_sys_rst_n,
 
     output  [11:0]  o_l2_unread_size,
     output          o_l1ddr_rw_confilicts,
+    output          o_ddr_base_addr_inc,
+    output          o_ddr_base_addr_dec,
 
     input   [11:0]  i_l1_burst_address,
     input           i_l1_burst_address_enable,
@@ -12,14 +15,12 @@ module L2_cache (
 
     input           i_ddr_operate_enable,
     input           i_ddr_rw,
-    inout   [127:0] io_ddr_data_bus
+    input   [127:0] i_ddr_data_bus,
+    output  [127:0] o_ddr_data_bus
 );
 
     wire    [15:0]  l1cache_read_bus;
     wire    [15:0]  l1cache_write_bus;
-
-    wire    [127:0] ddr_read_bus;
-    wire    [127:0] ddr_write_bus;
 
     genvar i;
     generate
@@ -29,38 +30,20 @@ module L2_cache (
         end
     endgenerate
 
-    genvar j;
-    generate
-        for (j = 0; j < 128; j = j + 1) begin
-            bufif1  ddrwritel2  (ddr_write_bus[j], io_ddr_data_bus[j], i_ddr_rw && i_ddr_operate_enable);
-            bufif1  ddrreadl2   (io_ddr_data_bus[j], ddr_write_bus[j], !i_ddr_rw && i_ddr_operate_enable);
-        end
-    endgenerate
-
     reg [11:0]  l2cache_unread_size         = 12'h0;
     reg [11:0]  l1cache_operating_address   = 12'h0;
     reg [8:0]   ddr_operating_address       = 9'h0;
 
-    reg         l2cache_full;
-    reg         l2cache_empty;
-
     reg         l1ddr_rw_confilicts;
 
-    always @(*) begin
-        if (l2cache_unread_size == 0) begin
-            l2cache_empty = 1'b1;
-            l2cache_full = 1'b0;
-        end else if (l2cache_unread_size == 12'hFFF) begin
-            l2cache_empty = 1'b0;
-            l2cache_full = 1'b1;
-        end else begin
-            l2cache_empty = 1'b0;
-            l2cache_full = 1'b0;
-        end
-    end
+    reg [2:0]   l1cache_read_8addr_dl;
+    reg         ddr_base_addr_inc;
+    reg         ddr_base_addr_dec;
 
-    always @(posedge clk_166M66) begin
-        if (i_l1_operate_enable && i_l1_rw)
+    always @(posedge clk_166M66 or negedge mcu_sys_rst_n) begin
+        if (!mcu_sys_rst_n)
+            l1cache_operating_address <= 12'h0;
+        else if (i_l1_operate_enable && i_l1_rw)
             l1cache_operating_address <= l1cache_operating_address - 12'h1;
         else if (i_l1_operate_enable && !i_l1_rw)
             l1cache_operating_address <= l1cache_operating_address + 12'h1;
@@ -69,6 +52,28 @@ module L2_cache (
     end
 
     always @(posedge clk_166M66) begin
+        l1cache_read_8addr_dl[2:0] <= l1cache_operating_address[5:3];
+    end
+
+    always @(*) begin
+        if (l1cache_read_8addr_dl - l1cache_operating_address[5:3] == 3'h8) begin
+            ddr_base_addr_dec = 1'b1;
+            ddr_base_addr_inc = 1'b0;
+        end else if (l1cache_operating_address[5:3] - l1cache_read_8addr_dl == 3'h8) begin
+            ddr_base_addr_dec = 1'b0;
+            ddr_base_addr_inc = 1'b1;
+        end else begin
+            ddr_base_addr_dec = 1'b0;
+            ddr_base_addr_inc = 1'b0;
+        end
+    end
+
+    assign o_ddr_base_addr_dec = ddr_base_addr_dec;
+    assign o_ddr_base_addr_inc = ddr_base_addr_inc;
+
+    always @(posedge clk_166M66 or negedge mcu_sys_rst_n) begin
+        if (!mcu_sys_rst_n)
+            ddr_operating_address <= 9'h0;
         if (i_ddr_operate_enable && i_ddr_rw)
             ddr_operating_address <= ddr_operating_address - 9'h1;
         else if (i_ddr_operate_enable && !i_ddr_rw)
@@ -78,6 +83,8 @@ module L2_cache (
     end
 
     always @(*) begin
+        if (!mcu_sys_rst_n)
+            l1ddr_rw_confilicts = 1'b0;
         if (l1cache_operating_address[11:3] == ddr_operating_address)
             l1ddr_rw_confilicts = 1'b1;
         else if (i_l1_burst_address_enable && (i_l1_burst_address[11:3] == ddr_operating_address))
@@ -103,8 +110,8 @@ module L2_cache (
         enb         (i_ddr_operate_enable),
         web         (i_ddr_rw),
         addrb       (ddr_operating_address),
-        dinb        (ddr_write_bus),
-        doutb       (ddr_read_bus)
+        dinb        (i_ddr_data_bus),
+        doutb       (o_ddr_data_bus)
     );
 
     assign  o_l2_unread_size = l2cache_unread_size;
