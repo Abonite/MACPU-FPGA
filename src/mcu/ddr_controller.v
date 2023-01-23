@@ -8,7 +8,6 @@ module ddr3 #(
 (
     input                                       clk_333M,
     input                                       clk_166M66,
-    input                                       clk_170M,
     input                                       clk_200M,
 
     input                                       mcu_sys_rst_n,
@@ -33,8 +32,21 @@ module ddr3 #(
 
     // USER INTERFACE
     input   [27:0]                              i_address_bus,
-    input                                       i_rw,
-    inout   [127:0]                             io_data_bus
+    input                                       i_address_enable,
+
+    inout   [127:0]                             io_data_bus,
+
+    input                                       i_psc_rw,
+    input                                       i_psc_request,
+    output                                      o_psc_bus_available,
+    input                                       i_dsc_rw,
+    input                                       i_dsc_request,
+    output                                      o_dsc_bus_available,
+    input                                       i_l2_rw,
+    input                                       i_l2_request,
+    output                                      o_l2_bus_available,
+
+    output                                      o_busy
 );
 
     wire [127:0]    app_rd_data;
@@ -42,29 +54,112 @@ module ddr3 #(
     wire            ddr_rdfifo_full;
     wire            ddr_rdfifo_empty;
 
-    // TODO: How to determine the clock frequency about din and dout
-    // Does MCU and DDR need to work at the same frequency?
-    // Does the CPU need to work at the same frequency as the MCU?
+    reg         psc_rw;
+    reg         dsc_rw;
+    reg         l2_rw;
 
-    // TODO: May be we can use this fifo as a cache
-    // if the fifo is empty, or almost empty, send a signal to mcu
-    // then mcu will judge weather read ddr data into fifo
-    // when fifo is not empty, if mcu need to refresh fifo now
-    // then reset fifo and read data from new address
+    parameter
+        NONE = 2'h0,
+        PSC = 2'h1,
+        DSC = 2'h2,
+        L2 = 2'h3;
 
-    fifo_bram_128x16to16x128 u_ddr_read_fifo (
-        rst         (reset_fifo),
-        wr_clk      (clk_166M66),
-        rd_clk      (),
-        din         (app_rd_data),
-        wr_en       (app_rd_data_valid & (~ddr_rd_fifo_full)),
-        rd_en       (),
-        dout        (),
-        full        (ddr_rdfifo_full),
-        wr_ack      (),
-        empty       (ddr_rdfifo_empty),
-        valid       ()
-    );
+    reg [1:0]   requestting;
+
+    always @(*) begin
+        if (i_psc_request) begin
+            psc_rw = i_psc_rw;
+            requestting = PSC;
+        end else if (i_dsc_request) begin
+            dsc_rw = i_dsc_rw;
+            requestting = DSC;
+        end else if (i_l2_request) begin
+            l2_rw = i_l2_rw;
+            requestting = L2;
+        end
+    end
+
+    reg [2:0]   rw_counter;
+
+    reg         busy;
+
+    parameter
+        DDR_SM_IDLE         = 3'h0,
+        DDR_SM_PSC_READ     = 3'h1,
+        DDR_SM_PSC_WRITE    = 3'h2,
+        DDR_SM_DSC_READ     = 3'h3,
+        DDR_SM_DSC_WRITE    = 3'h4,
+        DDR_SM_L2_READ      = 3'h5,
+        DDR_SM_L2_WRITE     = 3'h6,
+        DDR_SM_NEW_REQUEST  = 3'h7;
+
+    reg [1:0]   ddr_curr_state;
+    reg [1:0]   ddr_next_state;
+
+    always @(posedge clk_166M66) begin
+        if (!mcu_sys_rst_n) begin
+            ddr_curr_state <= DDR_SM_IDLE;
+            ddr_next_state <= DDR_SM_IDLE;
+        end else
+            ddr_curr_state <= ddr_next_state;
+    end
+
+    always @(*) begin
+        case (ddr_curr_state)
+            DDR_SM_IDLE: begin
+                if (i_psc_request && !i_psc_rw)
+                    ddr_next_state = DDR_SM_PSC_READ;
+                else if (i_psc_request && i_psc_rw)
+                    ddr_next_state = DDR_SM_PSC_WRITE;
+                else if (i_dsc_request && !i_dsc_rw)
+                    ddr_next_state = DDR_SM_DSC_READ;
+                else if (i_dsc_request && i_dsc_rw)
+                    ddr_next_state = DDR_SM_DSC_WRITE;
+                else if (i_l2_request && !i_l2_rw)
+                    ddr_next_state = DDR_SM_L2_WRITE;
+                else if (i_l2_request && i_l2_rw)
+                    ddr_next_state = DDR_SM_L2_WRITE;
+                else
+                    ddr_next_state = DDR_SM_IDLE;
+            end
+            DDR_SM_PSC_READ: begin
+                if (i_psc_request && !i_dsc_rw)
+                    ddr_next_state = DDR_SM_PSC_READ;
+                else if (!i_psc_request && !i_dsc_request && !i_l2_request)
+                    ddr_next_state = DDR_SM_PSC_READ;
+                else
+                    ddr_next_state = DDR_SM_NEW_REQUEST;
+            end
+            DDR_SM_PSC_WRITE: begin
+                if (i_psc_request && i_dsc_rw)
+                    ddr_next_state = DDR_SM_PSC_READ;
+                else if (!i_psc_request && !i_dsc_request && !i_l2_request)
+                    ddr_next_state = DDR_SM_PSC_READ;
+                else
+                    ddr_next_state = DDR_SM_NEW_REQUEST;
+            end
+            DDR_SM_NEW_REQUEST: begin
+                if (rw_counter != 3'h4)
+                    rw_counter = rw_counter + 3'h1;
+                else if (requestting == NONE)
+                    ddr_next_state = DDR_SM_IDLE;
+                else if ((requestting == PSC) && (!psc_rw))
+                    ddr_next_state = DDR_SM_PSC_READ;
+                else if ((requestting == PSC) && (psc_rw))
+                    ddr_next_state = DDR_SM_PSC_WRITE;
+                else if ((requestting == DSC) && (!dsc_rw))
+                    ddr_next_state = DDR_SM_DSC_READ;
+                else if ((requestting == DSC) && (dsc_rw))
+                    ddr_next_state = DDR_SM_DSC_WRITE;
+                else if ((requestting == L2) && (!l2_rw))
+                    ddr_next_state = DDR_SM_L2_READ;
+                else if ((requestting == L2) && (l2_rw))
+                    ddr_next_state = DDR_SM_L2_WRITE;
+                else
+                    ddr_next_state = DDR_SM_IDLE;
+            end
+        endcase
+    end
 
     mig_7series_0 u_ddr3_controller (
         // ddr3 physical address, output, 14bit

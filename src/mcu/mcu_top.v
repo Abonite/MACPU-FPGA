@@ -32,11 +32,11 @@ module mcu_top #(
     output                                      o_init_calib_complete
 );
 
-    // ROM:                                 0x0000_0000 -> 0x0000_0FFF,         4k x 16bit
-    // program cache for program segments(pcps):    bram    256 x 48bit
-    // data segment cache(dsc):                     dram    128 x 16bit
-    // L2 cache:                                    bram    4096 x 16bit
-    // DDR:                                 0x1000_0000 -> 0x1800_0000,         128M x 16bit
+    // ROM:                         0x0000_0000 -> 0x0000_0FFF,         4k x 16bit
+    // program segments cache(psc): bram    256 x 48bit
+    // data segment cache(dsc):     dram    256 x 8bit 128 x 16bit
+    // L2 cache:                    bram    8192 x 16bit 1024 x 128bit
+    // DDR:                         0x1000_0000 -> 0x1800_0000,         128M x 16bit
 
     // Currently, the real address offset read by the cpu core
     reg [31:0]  curr_core_read_offset_addr;
