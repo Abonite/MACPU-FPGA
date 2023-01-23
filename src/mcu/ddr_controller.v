@@ -54,9 +54,9 @@ module ddr3 #(
     wire            ddr_rdfifo_full;
     wire            ddr_rdfifo_empty;
 
-    reg         psc_rw;
-    reg         dsc_rw;
-    reg         l2_rw;
+    reg         psc_bus_avalable;
+    reg         dsc_bus_avalable;
+    reg         l2_bus_avalable;
 
     parameter
         NONE = 2'h0,
@@ -68,18 +68,23 @@ module ddr3 #(
 
     always @(*) begin
         if (i_psc_request) begin
-            psc_rw = i_psc_rw;
             requestting = PSC;
         end else if (i_dsc_request) begin
-            dsc_rw = i_dsc_rw;
             requestting = DSC;
         end else if (i_l2_request) begin
-            l2_rw = i_l2_rw;
             requestting = L2;
         end
     end
 
     reg [2:0]   rw_counter;
+    reg         countting;
+
+    always @(clk_166M66) begin
+        if (countting)
+            rw_counter = rw_counter + 2'h1;
+        else
+            rw_counter = 2'h0;
+    end
 
     reg         busy;
 
@@ -140,23 +145,56 @@ module ddr3 #(
             end
             DDR_SM_NEW_REQUEST: begin
                 if (rw_counter != 3'h4)
-                    rw_counter = rw_counter + 3'h1;
+                    ddr_next_state = DDR_SM_NEW_REQUEST;
                 else if (requestting == NONE)
                     ddr_next_state = DDR_SM_IDLE;
-                else if ((requestting == PSC) && (!psc_rw))
+                else if ((requestting == PSC) && (!i_psc_rw))
                     ddr_next_state = DDR_SM_PSC_READ;
-                else if ((requestting == PSC) && (psc_rw))
+                else if ((requestting == PSC) && (i_psc_rw))
                     ddr_next_state = DDR_SM_PSC_WRITE;
-                else if ((requestting == DSC) && (!dsc_rw))
+                else if ((requestting == DSC) && (!i_dsc_rw))
                     ddr_next_state = DDR_SM_DSC_READ;
-                else if ((requestting == DSC) && (dsc_rw))
+                else if ((requestting == DSC) && (i_dsc_rw))
                     ddr_next_state = DDR_SM_DSC_WRITE;
-                else if ((requestting == L2) && (!l2_rw))
+                else if ((requestting == L2) && (!i_l2_rw))
                     ddr_next_state = DDR_SM_L2_READ;
-                else if ((requestting == L2) && (l2_rw))
+                else if ((requestting == L2) && (i_l2_rw))
                     ddr_next_state = DDR_SM_L2_WRITE;
                 else
                     ddr_next_state = DDR_SM_IDLE;
+            end
+        endcase
+    end
+
+    always @(*) begin
+        case (ddr_curr_state)
+            DDR_SM_IDLE: begin
+                psc_bus_avalable = 1'b0;
+                dsc_bus_avalable = 1'b0;
+                l2_bus_avalable = 1'b0;
+                countting = 1'b0;
+            end
+            DDR_SM_PSC_READ: begin
+                psc_bus_avalable = 1'b1;
+                dsc_bus_avalable = 1'b0;
+                l2_bus_avalable = 1'b0;
+            end
+            DDR_SM_PSC_WRITE: begin
+                psc_bus_avalable = 1'b1;
+                dsc_bus_avalable = 1'b0;
+                l2_bus_avalable = 1'b0;
+            end
+            DDR_SM_NEW_REQUEST: begin
+                countting = 1'b1;
+                if (rw_counter == 3'h3) begin
+                    psc_bus_avalable = 1'h0;
+                    dsc_bus_avalable = 1'h0;
+                    l2_bus_avalable = 1'h0;
+                end else begin
+                    psc_bus_avalable = psc_bus_avalable;
+                    dsc_bus_avalable = dsc_bus_avalable;
+                    l2_bus_avalable = l2_bus_avalable;
+                end
             end
         endcase
     end
