@@ -1,3 +1,5 @@
+`define DEBUG 1
+
 module ddr3 #(
     parameter BURST_LENTH = 8,
 
@@ -35,6 +37,7 @@ module ddr3 #(
     input                                       i_address_enable,
 
     inout   [127:0]                             io_data_bus,
+    input                                       i_data_enable,
 
     input                                       i_psc_rw,
     input                                       i_psc_request,
@@ -44,9 +47,7 @@ module ddr3 #(
     output                                      o_dsc_bus_available,
     input                                       i_l2_rw,
     input                                       i_l2_request,
-    output                                      o_l2_bus_available,
-
-    output                                      o_busy
+    output                                      o_l2_bus_available
 );
 
     wire [127:0]    app_rd_data;
@@ -57,6 +58,17 @@ module ddr3 #(
     reg         psc_bus_avalable;
     reg         dsc_bus_avalable;
     reg         l2_bus_avalable;
+
+    reg         rw;
+    reg         app_en;
+
+    genvar i;
+    generate
+        for (i = 0; i < 16; i = i + 1) begin
+            bufif1  datain  (app_wdf_data[i], io_data_bus[i], i_data_enable && !rw);
+            bufif1  dataout  (io_data_bus[i], app_rd_data[i], i_data_enable && rw);
+        end
+    endgenerate
 
     parameter
         NONE = 2'h0,
@@ -86,8 +98,6 @@ module ddr3 #(
             rw_counter = 2'h0;
     end
 
-    reg         busy;
-
     parameter
         DDR_SM_IDLE         = 3'h0,
         DDR_SM_PSC_READ     = 3'h1,
@@ -98,8 +108,41 @@ module ddr3 #(
         DDR_SM_L2_WRITE     = 3'h6,
         DDR_SM_NEW_REQUEST  = 3'h7;
 
+
+
     reg [1:0]   ddr_curr_state;
     reg [1:0]   ddr_next_state;
+
+    `ifdef DEBUG
+        reg [87:0]  debug_curr_state;
+        reg [87:0]  debug_next_state;
+
+        always @(*) begin
+            case (ddr_curr_state)
+                DDR_SM_IDLE: debug_curr_state = "IDLE";
+                DDR_SM_PSC_READ: debug_curr_state = "PSC_READ";
+                DDR_SM_PSC_WRITE: debug_curr_state = "PSC_WRITE";
+                DDR_SM_DSC_READ: debug_curr_state = "DSC_READ";
+                DDR_SM_DSC_WRITE: debug_curr_state = "DSC_WRITE";
+                DDR_SM_L2_READ: debug_curr_state = "L2_READ";
+                DDR_SM_L2_WRITE: debug_curr_state = "L2_WRITE";
+                DDR_SM_NEW_REQUEST: debug_curr_state = "NEW_REQUEST";
+            endcase
+        end
+
+        always @(*) begin
+            case (ddr_next_state)
+                DDR_SM_IDLE: debug_next_state = "IDLE";
+                DDR_SM_PSC_READ: debug_next_state = "PSC_READ";
+                DDR_SM_PSC_WRITE: debug_next_state = "PSC_WRITE";
+                DDR_SM_DSC_READ: debug_next_state = "DSC_READ";
+                DDR_SM_DSC_WRITE: debug_next_state = "DSC_WRITE";
+                DDR_SM_L2_READ: debug_next_state = "L2_READ";
+                DDR_SM_L2_WRITE: debug_next_state = "L2_WRITE";
+                DDR_SM_NEW_REQUEST: debug_next_state = "NEW_REQUEST";
+            endcase
+        end
+    `endif
 
     always @(posedge clk_166M66) begin
         if (!mcu_sys_rst_n) begin
@@ -128,7 +171,7 @@ module ddr3 #(
                     ddr_next_state = DDR_SM_IDLE;
             end
             DDR_SM_PSC_READ: begin
-                if (i_psc_request && !i_dsc_rw)
+                if (i_psc_request && !i_psc_rw)
                     ddr_next_state = DDR_SM_PSC_READ;
                 else if (!i_psc_request && !i_dsc_request && !i_l2_request)
                     ddr_next_state = DDR_SM_PSC_READ;
@@ -136,10 +179,42 @@ module ddr3 #(
                     ddr_next_state = DDR_SM_NEW_REQUEST;
             end
             DDR_SM_PSC_WRITE: begin
-                if (i_psc_request && i_dsc_rw)
+                if (i_psc_request && i_psc_rw)
                     ddr_next_state = DDR_SM_PSC_READ;
                 else if (!i_psc_request && !i_dsc_request && !i_l2_request)
                     ddr_next_state = DDR_SM_PSC_READ;
+                else
+                    ddr_next_state = DDR_SM_NEW_REQUEST;
+            end
+            DDR_SM_DSC_READ: begin
+                if (i_psc_request && !i_dsc_rw)
+                    ddr_next_state = DDR_SM_DSC_READ;
+                else if (!i_psc_request && !i_dsc_request && !i_l2_request)
+                    ddr_next_state = DDR_SM_DSC_READ;
+                else
+                    ddr_next_state = DDR_SM_NEW_REQUEST;
+            end
+            DDR_SM_DSC_READ: begin
+                if (i_psc_request && !i_dsc_rw)
+                    ddr_next_state = DDR_SM_DSC_READ;
+                else if (!i_psc_request && !i_dsc_request && !i_l2_request)
+                    ddr_next_state = DDR_SM_DSC_READ;
+                else
+                    ddr_next_state = DDR_SM_NEW_REQUEST;
+            end
+            DDR_SM_L2_WRITE: begin
+                if (i_psc_request && i_l2_rw)
+                    ddr_next_state = DDR_SM_L2_READ;
+                else if (!i_psc_request && !i_dsc_request && !i_l2_request)
+                    ddr_next_state = DDR_SM_L2_READ;
+                else
+                    ddr_next_state = DDR_SM_NEW_REQUEST;
+            end
+            DDR_SM_L2_WRITE: begin
+                if (i_psc_request && i_l2_rw)
+                    ddr_next_state = DDR_SM_L2_READ;
+                else if (!i_psc_request && !i_dsc_request && !i_l2_request)
+                    ddr_next_state = DDR_SM_L2_READ;
                 else
                     ddr_next_state = DDR_SM_NEW_REQUEST;
             end
@@ -172,17 +247,50 @@ module ddr3 #(
                 psc_bus_avalable = 1'b0;
                 dsc_bus_avalable = 1'b0;
                 l2_bus_avalable = 1'b0;
+                rw = 1'b0;
                 countting = 1'b0;
             end
             DDR_SM_PSC_READ: begin
                 psc_bus_avalable = 1'b1;
                 dsc_bus_avalable = 1'b0;
                 l2_bus_avalable = 1'b0;
+                rw = 1'b0;
+                countting = 1'b0;
             end
             DDR_SM_PSC_WRITE: begin
                 psc_bus_avalable = 1'b1;
                 dsc_bus_avalable = 1'b0;
                 l2_bus_avalable = 1'b0;
+                rw = 1'b1;
+                countting = 1'b0;
+            end
+            DDR_SM_DSC_READ: begin
+                psc_bus_avalable = 1'b0;
+                dsc_bus_avalable = 1'b1;
+                l2_bus_avalable = 1'b0;
+                rw = 1'b0;
+                countting = 1'b0;
+            end
+            DDR_SM_DSC_WRITE: begin
+                psc_bus_avalable = 1'b0;
+                dsc_bus_avalable = 1'b1;
+                l2_bus_avalable = 1'b0;
+                rw = 1'b1;
+                countting = 1'b0;
+            end
+            DDR_SM_L2_READ: begin
+                psc_bus_avalable = 1'b0;
+                dsc_bus_avalable = 1'b0;
+                l2_bus_avalable = 1'b1;
+                rw = 1'b0;
+                countting = 1'b0;
+            end
+            DDR_SM_L2_WRITE: begin
+                psc_bus_avalable = 1'b0;
+                dsc_bus_avalable = 1'b0;
+                l2_bus_avalable = 1'b1;
+                rw = 1'b1;
+                countting = 1'b0;
             end
             DDR_SM_NEW_REQUEST: begin
                 countting = 1'b1;
@@ -190,10 +298,12 @@ module ddr3 #(
                     psc_bus_avalable = 1'h0;
                     dsc_bus_avalable = 1'h0;
                     l2_bus_avalable = 1'h0;
+                    rw = 1'h0;
                 end else begin
                     psc_bus_avalable = psc_bus_avalable;
                     dsc_bus_avalable = dsc_bus_avalable;
                     l2_bus_avalable = l2_bus_avalable;
+                    rw = rw;
                 end
             end
         endcase
@@ -229,9 +339,9 @@ module ddr3 #(
 
         // Application interface ports
         // BRC 28bit, input
-        .app_addr                       (i_addr_bus),
+        .app_addr                       (address_bus),
         // 0: write; 1: read. 3bit, input
-        .app_cmd                        ({2'b0, ~i_rw}),
+        .app_cmd                        ({2'b0, ~rw}),
         // cmd is enable, input
         .app_en                         (app_en),
         // write data, 16 x 8 = 128bit, input
@@ -269,5 +379,9 @@ module ddr3 #(
         .app_sr_req                     (),
         .app_sr_active                  ()
     );
+
+    assign o_psc_bus_available = psc_bus_avalable;
+    assign o_dsc_bus_available = dsc_bus_avalable;
+    assign o_l2_bus_available = l2_bus_avalable;
 
 endmodule
