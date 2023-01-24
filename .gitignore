@@ -1,3 +1,7 @@
 /.vscode
 *.bk
 *.drawio
+sim_build/
+sim/*/*/*.v
+*.ini
+transcript
