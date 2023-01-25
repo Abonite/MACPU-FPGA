@@ -35,7 +35,7 @@ module mcu_top #(
     // ROM:                         0x0000_0000 -> 0x0000_0FFF,         4k x 16bit
     // program segments cache(psc): bram    256 x 48bit
     // data segment cache(dsc):     dram    256 x 8bit 128 x 16bit
-    // L2 cache:                    bram    8192 x 16bit 1024 x 128bit
+    // L2 cache:                    bram    4096 x 16bit 512 x 128bit
     // DDR:                         0x1000_0000 -> 0x1800_0000,         128M x 16bit
 
     // Currently, the real address offset read by the cpu core
@@ -85,10 +85,12 @@ module mcu_top #(
         .i_l1_rw                    (),
         .io_l1_data_bus             (),
 
-        .i_ddr_operate_enable       (l2_ddr_op_en && ddr_rd_data_vld),
-        .i_ddr_rw                   (l2_ddr_rw),
-        .i_ddr_data_bus             (ddr_to_l2_data),
-        .o_ddr_data_bus             (l2_to_ddr_data)
+        .i_l2_ddr_operate_lock      (),
+        .i_l2_ddr_force_loading     (),
+        .i_l2_ddr_bus_enable        (),
+        .o_l2_ddr_operate_enable    (),
+        .o_l2_ddr_rw                (),
+        .io_l2_ddr_data_bus         ()
     );
 
     reg [2:0]   curr_state;
@@ -115,94 +117,13 @@ module mcu_top #(
             curr_state <= next_state;
     end
 
-    always @(*) begin
-        case (curr_state)
-            IDLE: begin
-                next_state = INIT_L2;
-            end
-            INIT_L2: begin
-                if (l2_unread_size == {12{1'b1}})
-                    next_state = INIT_L1DFC;
-                else
-                    next_state = INIT_L2;
-            end
-            INIT_L1DFC: begin
-                next_state = WAIT_SPACE_IN_L2_L1DFC;
-            end
-            WAIT_SPACE_IN_L2_L1DFC: begin
-                if (l1ddr_rw_confilicts)
-                    next_state = WAIT_SPACE_IN_L2_L1DFC;
-                else if (!l1ddr_rw_confilicts && (l2_unread_size < {12{1'b1}}))
-                    next_state = LOAD_INTO_L2;
-                else
-                    next_state = WAIT_SPACE_IN_L2_L1DFC;
-            end
-            LOAD_INTO_DFC: begin
-                next_state = WAIT_SPACE_IN_L2_L1DFC;
-            end
-            LOAD_INTO_L2: begin
-                if (!l1ddr_rw_confilicts && (l2_unread_size < {12{1'b1}}))
-                    next_state = LOAD_INTO_L2;
-                else
-                    next_state = WAIT_SPACE_IN_L2_L1DFC;
-            end
-        endcase
-    end
+    ddr3_with_controller u_ddr3_w_c (
+        .clk_333M                       (),
+        .clk_166M66                     (),
+        .clk_200M                       (),
 
-    always @(*) begin
-        case (curr_state)
-            IDLE: begin
-                ddr_op_addr = 28'h0;
-                ddr_op_cmd = 3'h0;
-                ddr_op_en = 1'b0;
-                l2_ddr_op_en = 1'b0;
-            end
-            INIT_L2: begin
-                ddr_op_addr = ddr_base_addr + l2_unread_size;
-                ddr_op_cmd = 3'h1;
-                ddr_op_en = 1'b1;
-                l2_ddr_op_en = 1'b1;
-            end
-            INIT_L1DFC: begin
-                ddr_op_addr = 28'h0;
-                ddr_op_cmd = 3'h0;
-                ddr_op_en = 1'b0;
-            end
-            WAIT_SPACE_IN_L2_L1DFC: begin
-                ddr_op_addr = 28'h0;
-                ddr_op_cmd = 3'h0;
-                ddr_op_en = 1'b0;
-            end
-            LOAD_INTO_L2: begin
-                ddr_op_addr = ddr_base_addr + l2_unread_size;
-                ddr_op_cmd = 3'h1;
-                ddr_op_en = 1'b1;
-            end
-            LOAD_INTO_DFC: begin
-                ddr_op_addr = 28'h0;
-                ddr_op_cmd = 3'h0;
-                ddr_op_en = 1'b0;
-            end
-            WRITE_L2_INTO_DDR: begin
-            end
-            WRITE_L1DFC_INTO_DDR: begin
-            end
-            //default: // error here
-        endcase
-    end
-
-    always @(posedge clk_166M66 or negedge mcu_sys_rst_n) begin
-        if (!mcu_sys_rst_n)
-            ddr_base_addr = 28'h0;
-        else if (ddr_base_addr_inc)
-            ddr_base_addr = ddr_base_addr + 28'h1;
-        else if (ddr_base_addr_dec)
-            ddr_base_addr = ddr_base_addr - 28'h1;
-        else
-            ddr_base_addr = ddr_base_addr;
-    end
-
-    mig_7series_0 u_ddr3_controller (
+        .mcu_sys_rst_n                  (),
+    // DDR PHY INTERFACE
         // ddr3 physical address, output, 14bit
         .ddr3_addr                      (o_ddr3_addr),
         // ddr3 physical bank address, output, 3bit
@@ -229,48 +150,24 @@ module mcu_top #(
         // data mask
         .ddr3_dm                        (o_ddr3_dm),
         .ddr3_odt                       (o_ddr3_odt),
+    // USER INTERFACE
+        .i_address_bus                  (),
+        .i_address_enable               (),
 
-        // Application interface ports
-        // BRC 28bit, input
-        .app_addr                       (ddr_op_addr),
-        // 0: write; 1: read. 3bit, input
-        .app_cmd                        (ddr_op_cmd),
-        // cmd is enable, input
-        .app_en                         (ddr_op_en),
-        // write data, 16 x 8 = 128bit, input
-        .app_wdf_data                   (l2_to_ddr_data),
-        .app_wdf_end                    (app_wdf_end),
-        .app_wdf_wren                   (app_wdf_wren),
-        // write data mask, 2bit, input
-        .app_wdf_mask                   (app_wdf_mask),
-        // read data, 16 x 8 = 128bit, output
-        .app_rd_data                    (ddr_to_l2_data),
-        .app_rd_data_end                (ddr_rd_data_end),
-        .app_rd_data_valid              (ddr_rd_data_vld),
-        // DDR controller is ready to read or write data
-        .app_rdy                        (ddr_ready),
-        // write fifo is ready to get data, output
-        .app_wdf_rdy                    (app_wdf_rdy),
-        // request an immediate refresh operation, input
-        .app_ref_req                    (),
-        // refresh operation has been sent to the DDR chip, output
-        .app_ref_ack                    (),
-        // request an immediate ZQ calibration operation, input
-        .app_zq_req                     (),
-        // ZQ calibration operation sent to DDR chip, output
-        .app_zq_ack                     (),
-        // 166.6MHz
-        .ui_clk                         (clk_166M66),
-        .ui_clk_sync_rst                (mcu_sys_rst_n),
-        // System Clock Ports
-        .sys_clk_i                      (clk_333M),
-        .sys_rst                        (mcu_sys_rst_n),
-        // Reference Clock Ports
-        .clk_ref_i                      (clk_200M),
-        // temperature
-        .device_temp_i                  (),
-        .app_sr_req                     (),
-        .app_sr_active                  ()
+        .io_data_bus                    (),
+        .i_data_enable                  (),
+
+        .i_psc_rw                       (),
+        .i_psc_request                  (),
+        .o_psc_bus_available            (),
+
+        .i_dsc_rw                       (),
+        .i_dsc_request                  (),
+        .o_dsc_bus_available            (),
+
+        .i_l2_rw                        (),
+        .i_l2_request                   (),
+        .o_l2_bus_available             ()
     );
 
 endmodule
