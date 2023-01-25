@@ -37,7 +37,7 @@ module ddr3_with_controller #(
     input                                       i_address_enable,
 
     inout   [127:0]                             io_data_bus,
-    input                                       i_data_enable,
+    input                                       io_data_enable,
 
     input                                       i_psc_rw,
     input                                       i_psc_request,
@@ -63,11 +63,17 @@ module ddr3_with_controller #(
     reg         rw;
     reg         app_en;
 
+    wire        write_data_en;
+    wire        read_data_en;
+
+    bufif0  datareaden  (io_data_enable, read_data_en, rw);
+    bufif1  datawriteen (write_data_en, io_data_enable, rw);
+
     genvar i;
     generate
         for (i = 0; i < 16; i = i + 1) begin
-            bufif1  datain  (app_wdf_data[i], io_data_bus[i], i_data_enable && !rw);
-            bufif1  dataout  (io_data_bus[i], app_rd_data[i], i_data_enable && rw);
+            bufif1  datain  (app_wdf_data[i], io_data_bus[i], write_data_en && !rw);
+            bufif1  dataout  (io_data_bus[i], app_rd_data[i], read_data_en && rw);
         end
     endgenerate
 
@@ -347,14 +353,14 @@ module ddr3_with_controller #(
         .app_en                         (app_en),
         // write data, 16 x 8 = 128bit, input
         .app_wdf_data                   (app_wdf_data),
-        .app_wdf_end                    (app_wdf_end),
-        .app_wdf_wren                   (app_wdf_wren),
+        .app_wdf_end                    (write_data_en),
+        .app_wdf_wren                   (write_data_en),
         // write data mask, 2bit, input
         .app_wdf_mask                   (app_wdf_mask),
         // read data, 16 x 8 = 128bit, output
         .app_rd_data                    (app_rd_data),
-        .app_rd_data_end                (app_rd_data_end),
-        .app_rd_data_valid              (app_rd_data_valid),
+        .app_rd_data_end                (read_data_en),
+        .app_rd_data_valid              (read_data_en),
         // DDR controller is ready to read or write data
         .app_rdy                        (app_rdy),
         // write fifo is ready to get data, output

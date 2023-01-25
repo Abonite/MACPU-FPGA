@@ -18,7 +18,8 @@ module L2_cache (
     input           i_l2_ddr_bus_enable,
     output          o_l2_ddr_operate_enable,
     output          o_l2_ddr_rw,
-    inout   [127:0] io_l2_ddr_data_bus
+    inout   [127:0] io_l2_ddr_data_bus,
+    inout           io_l2_ddr_data_enable
 );
 
     wire    [15:0]  l1cache_read_bus;
@@ -26,6 +27,12 @@ module L2_cache (
 
     wire    [127:0] ddr_read_bus;
     wire    [127:0] ddr_write_bus;
+
+    wire            read_ddr_data_en;
+    wire            write_ddr_data_en;
+
+    bufif1  readen  (io_l2_ddr_data_enable, read_ddr_data_en, o_l2_ddr_rw);
+    bufif0  writeen (write_ddr_data_en, io_l2_ddr_data_enable, o_l2_ddr_rw);
 
     genvar i;
     generate
@@ -153,7 +160,7 @@ module L2_cache (
     always @(posedge clk_166M66 or negedge mcu_sys_rst_n) begin
         if (!mcu_sys_rst_n)
             ddr_operating_address <= 9'h0;
-        if (i_l2_ddr_bus_enable && o_l2_ddr_operate_enable && !o_l2_ddr_rw)
+        if (i_l2_ddr_bus_enable && o_l2_ddr_operate_enable && write_ddr_data_en && !o_l2_ddr_rw)
             ddr_operating_address <= ddr_operating_address - 9'h1;
         if (i_l2_ddr_bus_enable && o_l2_ddr_operate_enable && o_l2_ddr_rw)
             ddr_operating_address <= ddr_operating_address + 9'h1;
@@ -186,7 +193,7 @@ module L2_cache (
         douta       (l1cache_read_bus),
         // port B 128bit, addr 9bit
         clkb        (clk_166M66),
-        enb         (o_l2_ddr_operate_enable && i_l2_ddr_bus_enable),
+        enb         (o_l2_ddr_operate_enable && i_l2_ddr_bus_enable && write_ddr_data_en),
         web         (!o_l2_ddr_rw),
         addrb       (ddr_operating_address),
         dinb        (ddr_write_bus),

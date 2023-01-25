@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module pycpu_top (
+module macpu_top (
     input           wire    clk,
     input           wire    n_rst,
 

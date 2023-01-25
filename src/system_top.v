@@ -34,7 +34,7 @@ module system_top (
         .clk_in1        (sys_clk)
     );
 
-    pycpu_top u_pycpu (
+    macpu_top u_macpu (
         .clk            (o_cpu_clk_170M),
         .n_rst          (sys_n_rst && o_pin_mmcm_locked),
 

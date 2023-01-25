@@ -1,3 +1,31 @@
+/// L2 and L1 two-level cache are set in the MCU.
+///
+/// The L1 cache is divided into data cache and program cache.
+///
+/// When the cpu recovers from the reset state, the mcu first
+/// unlocks the L2 cache and starts to forcibly refresh the
+/// data in the L2 cache until the entire capacity of the L2
+/// cache has been refreshed, then unlocks the L1 cache and
+/// waits for the data in the L1 After all the data is refreshed,
+/// the cpu core is unlocked and the cpu core starts to work. When
+/// the cpu's data segment registers are loaded correctly, the L1
+/// data cache starts to be loaded through the memory access bus.
+/// At this point the L1 cache should start fetching data from
+/// the L2 cache automatically.
+///
+/// Both the L1 data cache and the L2 cache are directly mounted
+/// on the memory access bus controller.
+///
+/// The memory access bus controller should work with the following
+/// strategy: when only one device sends a read and write request,
+/// the bus controller should immediately respond to the request
+/// and start transmitting data; if two devices send read and write
+/// requests at the same time, the L1 data cache has a higher priority
+/// and should be responded to first. If another device sends a request
+/// while a read or write request is being responded to, the controller
+/// should respond to the new request four clock cycles later.
+
+
 module mcu_top #(
     parameter BURST_LENTH = 8,
 
@@ -60,14 +88,20 @@ module mcu_top #(
     wire            ddr_base_addr_inc;
     wire            ddr_base_addr_dec;
 
-    reg             l2_ddr_op_en;
-    reg             l2_ddr_rw;
-
     reg     [27:0]  ddr_op_addr;
     reg     [2:0]   ddr_op_cmd;
     reg             ddr_op_en;
 
     wire            ddr_ready;
+
+    reg             lock_l2;
+    reg             force_load_l2;
+
+    wire            l2_ddr_avaliable;
+    wire            l2_ddr_op_en;
+    wire            l2_ddr_rw;
+    wire    [127:0] l2_ddr_data_bus;
+    wire            l2_ddr_data_en;
 
     L2_cache u_l2_cache (
         .clk_166M66                 (clk_166M66),
@@ -85,12 +119,13 @@ module mcu_top #(
         .i_l1_rw                    (),
         .io_l1_data_bus             (),
 
-        .i_l2_ddr_operate_lock      (),
-        .i_l2_ddr_force_loading     (),
-        .i_l2_ddr_bus_enable        (),
-        .o_l2_ddr_operate_enable    (),
-        .o_l2_ddr_rw                (),
-        .io_l2_ddr_data_bus         ()
+        .i_l2_ddr_operate_lock      (lock_l2),
+        .i_l2_ddr_force_loading     (force_load_l2),
+        .i_l2_ddr_bus_enable        (l2_ddr_avaliable),
+        .o_l2_ddr_operate_enable    (l2_ddr_op_en),
+        .o_l2_ddr_rw                (l2_ddr_rw),
+        .io_l2_ddr_data_bus         (l2_ddr_data_bus),
+        .io_l2_ddr_data_enable      (l2_ddr_data_en)
     );
 
     reg [2:0]   curr_state;
@@ -101,13 +136,8 @@ module mcu_top #(
     parameter
         IDLE                    = 3'h0,
         INIT_L2                 = 3'h1,
-        INIT_L1DFC              = 3'h2,
-        WAIT_SPACE_IN_L2_L1DFC  = 3'h3,
-        LOAD_INTO_L2            = 3'h4,
-        LOAD_INTO_DFC           = 3'h5,
-        WRITE_L2_INTO_DDR       = 3'h6,
-        WRITE_L1DFC_INTO_DDR    = 3'h7;
-
+        INIT_DSC                = 3'h2,
+        WAIT                    = 3'h3;
     // DDR STATE MACHEN
     always @(posedge clk_166M66 or negedge mcu_sys_rst_n) begin
         if (!mcu_sys_rst_n || !ddr_ready) begin
@@ -115,6 +145,38 @@ module mcu_top #(
             next_state <= IDLE;
         end else
             curr_state <= next_state;
+    end
+
+    always @(*) begin
+        case (curr_state)
+            IDLE: begin
+                next_state = INIT_L2;
+            end
+            INIT_L2: begin
+                if (l2_unread_size < 12'hFFF)
+                    next_state = INIT_L2;
+                else
+                    next_state = INIT_DSC;
+            end
+            INIT_DSC: begin
+                next_state = WAIT;
+            end
+        endcase
+    end
+
+    always @(*) begin
+        case (curr_state)
+            IDLE: begin
+                lock_l2 = 1'b1;
+                force_load_l2 = 1'b0;
+            end
+            INIT_L2: begin
+                lock_l2 = 1'b0;
+                force_load_l2 = 1'b1;
+            end
+            INIT_DSC: begin
+            end
+        endcase
     end
 
     ddr3_with_controller u_ddr3_w_c (
@@ -154,8 +216,8 @@ module mcu_top #(
         .i_address_bus                  (),
         .i_address_enable               (),
 
-        .io_data_bus                    (),
-        .i_data_enable                  (),
+        .io_data_bus                    (l2_ddr_data_bus),
+        .io_data_enable                 (l2_ddr_data_en),
 
         .i_psc_rw                       (),
         .i_psc_request                  (),
@@ -165,9 +227,9 @@ module mcu_top #(
         .i_dsc_request                  (),
         .o_dsc_bus_available            (),
 
-        .i_l2_rw                        (),
-        .i_l2_request                   (),
-        .o_l2_bus_available             ()
+        .i_l2_rw                        (l2_ddr_rw),
+        .i_l2_request                   (l2_ddr_op_en),
+        .o_l2_bus_available             (l2_ddr_avaliable)
     );
 
 endmodule
