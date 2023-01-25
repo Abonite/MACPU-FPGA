@@ -1,6 +1,6 @@
 `define DEBUG 1
 
-module ddr3_with_controller #(
+module ddr3 #(
     parameter BURST_LENTH = 8,
 
     parameter DDR_PHY_ADDRBUS_WIDTH = 14,

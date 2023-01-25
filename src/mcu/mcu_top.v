@@ -25,6 +25,8 @@
 /// while a read or write request is being responded to, the controller
 /// should respond to the new request four clock cycles later.
 
+// TODO: if we need a pdc(pre-decoder) to Convert instructions to 48bit?
+
 
 module mcu_top #(
     parameter BURST_LENTH = 8,
