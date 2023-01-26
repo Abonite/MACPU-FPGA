@@ -2,12 +2,15 @@
 /// has been kept for at least two clock cycles. After two clock cycles, the
 /// request signal can be released and the request will be recorded.
 
+`define DEBUG 1`
+
 ///memory bus arbiter
 module mba (
     input   clk_166M66,
     input   mcu_sys_rst_n,
 
     output  o_data_bus_rw,
+    output  o_data_bus_enable,
 
     input   i_l2_requesting,
     input   i_l2_rw,
@@ -22,6 +25,7 @@ module mba (
     reg dsc_allow;
 
     reg rw;
+    reg io_en;
 
     reg [1:0]   counter;
     reg         counting;
@@ -48,39 +52,6 @@ module mba (
         NR_L2_WRITING  = 4'h6,
         NR_DSC_READING = 4'h7,
         NR_DSC_WRITING = 4'h8;
-
-    `ifdef DEBUG
-        reg [119:0]   dbg_curr_state;
-        reg [119:0]   dbg_next_state;
-
-        always @(*) begin
-            case (curr_state)
-                IDLE: dbg_curr_state = "IDLE"
-                L2_READDING: dbg_curr_state = "L2_READING"
-                L2_WRITTING: dbg_curr_state = "L2_WRITING"
-                DSC_READDING: dbg_curr_state = "DSC_READING"
-                DSC_WRITTING: dbg_curr_state = "DSC_WRITING"
-                NR_L2_READDING: dbg_curr_state = "NR_L2_READING"
-                NR_L2_WRITTING: dbg_curr_state = "NR_L2_WRITING"
-                NR_DSC_READDING: dbg_curr_state = "NR_DSC_READING"
-                NR_DSC_WRITTING: dbg_curr_state = "NR_DSC_WRITING"
-            endcase
-        end
-
-        always @(*) begin
-            case (next_state)
-                IDLE: dbg_next_state = "IDLE"
-                L2_READDING: dbg_next_state = "L2_READING"
-                L2_WRITTING: dbg_next_state = "L2_WRITING"
-                DSC_READDING: dbg_next_state = "DSC_READING"
-                DSC_WRITTING: dbg_next_state = "DSC_WRITING"
-                NR_L2_READDING: dbg_next_state = "NR_L2_READING"
-                NR_L2_WRITTING: dbg_next_state = "NR_L2_WRITING"
-                NR_DSC_READDING: dbg_next_state = "NR_DSC_READING"
-                NR_DSC_WRITTING: dbg_next_state = "NR_DSC_WRITING"
-            endcase
-        end
-    `endif
 
     always @(posedge clk_166M66 or mcu_sys_rst_n) begin
         if (!mcu_sys_rst_n) begin
@@ -188,6 +159,7 @@ module mba (
                 if (counter == 2'h3)
                     next_state = L2_WRITING;
             end
+            default: next_state = IDLE; // error
         endcase
     end
 
@@ -197,60 +169,109 @@ module mba (
                 l2_allow = 1'b0;
                 dsc_allow = 1'b0;
                 rw = 1'b0;
+                io_en = 1'b0;
                 counting = 1'b0;
             end
             L2_READING: begin
                 l2_allow = 1'b1;
                 dsc_allow = 1'b0;
                 rw = 1'b0;
+                io_en = 1'b1;
                 counting = 1'b0;
             end
             L2_WRITING: begin
                 l2_allow = 1'b1;
                 dsc_allow = 1'b0;
                 rw = 1'b1;
+                io_en = 1'b1;
                 counting = 1'b0;
             end
             DSC_READING: begin
                 l2_allow = 1'b0;
                 dsc_allow = 1'b1;
                 rw = 1'b0;
+                io_en = 1'b1;
                 counting = 1'b0;
             end
             DSC_WRITING: begin
                 l2_allow = 1'b0;
                 dsc_allow = 1'b1;
                 rw = 1'b1;
+                io_en = 1'b1;
                 counting = 1'b0;
             end
             NR_L2_READING: begin
                 l2_allow = l2_allow;
                 dsc_allow = dsc_allow;
                 rw = rw;
+                io_en = 1'b0;
                 counting = 1'b1;
             end
             NR_L2_WRITING: begin
                 l2_allow = l2_allow;
                 dsc_allow = dsc_allow;
                 rw = rw;
+                io_en = 1'b0;
                 counting = 1'b1;
             end
             NR_DSC_READING: begin
                 l2_allow = l2_allow;
                 dsc_allow = dsc_allow;
                 rw = rw;
+                io_en = 1'b0;
                 counting = 1'b1;
             end
             NR_DSC_WRITING: begin
                 l2_allow = l2_allow;
                 dsc_allow = dsc_allow;
                 rw = rw;
+                io_en = 1'b0;
                 counting = 1'b1;
             end
         endcase
     end
 
+    `ifdef DEBUG
+        reg [119:0]   dbg_curr_state;
+        reg [119:0]   dbg_next_state;
+
+        always @(*) begin
+            case (curr_state)
+                IDLE: dbg_curr_state = "IDLE";
+                L2_READING: dbg_curr_state = "L2_READING";
+                L2_WRITING: dbg_curr_state = "L2_WRITING";
+                DSC_READING: dbg_curr_state = "DSC_READING";
+                DSC_WRITING: dbg_curr_state = "DSC_WRITING";
+                NR_L2_READING: dbg_curr_state = "NR_L2_READING";
+                NR_L2_WRITING: dbg_curr_state = "NR_L2_WRITING";
+                NR_DSC_READING: dbg_curr_state = "NR_DSC_READING";
+                NR_DSC_WRITING: dbg_curr_state = "NR_DSC_WRITING";
+            endcase
+        end
+
+        always @(*) begin
+            case (next_state)
+                IDLE: dbg_next_state = "IDLE";
+                L2_READING: dbg_next_state = "L2_READING";
+                L2_WRITING: dbg_next_state = "L2_WRITING";
+                DSC_READING: dbg_next_state = "DSC_READING";
+                DSC_WRITING: dbg_next_state = "DSC_WRITING";
+                NR_L2_READING: dbg_next_state = "NR_L2_READING";
+                NR_L2_WRITING: dbg_next_state = "NR_L2_WRITING";
+                NR_DSC_READING: dbg_next_state = "NR_DSC_READING";
+                NR_DSC_WRITING: dbg_next_state = "NR_DSC_WRITING";
+            endcase
+        end
+
+        initial begin
+            $dumpfile ("mba.vcd");
+            $dumpvars (0, mba);
+        end
+    `endif
+
+
     assign o_data_bus_rw = rw;
     assign o_l2_allow = l2_allow;
     assign o_dsc_allow = dsc_allow;
+    assign o_data_bus_enable = io_en;
 endmodule
