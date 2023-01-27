@@ -2,7 +2,7 @@
 /// has been kept for at least two clock cycles. After two clock cycles, the
 /// request signal can be released and the request will be recorded.
 
-`define DEBUG 1`
+`define DEBUG 1
 
 ///memory bus arbiter
 module mba (
@@ -31,7 +31,7 @@ module mba (
     reg         counting;
 
     always @(posedge clk_166M66 or negedge mcu_sys_rst_n) begin
-        if (!mcu_sys_rst_n)
+        if (!mcu_sys_rst_n || !counting)
             counter <= 2'h0;
         else if (counting)
             counter <= counter + 2'h1;
@@ -51,7 +51,8 @@ module mba (
         NR_L2_READING  = 4'h5,
         NR_L2_WRITING  = 4'h6,
         NR_DSC_READING = 4'h7,
-        NR_DSC_WRITING = 4'h8;
+        NR_DSC_WRITING = 4'h8,
+        NR_IDLE        = 4'h9;
 
     always @(posedge clk_166M66 or mcu_sys_rst_n) begin
         if (!mcu_sys_rst_n) begin
@@ -61,7 +62,7 @@ module mba (
             curr_state <= next_state;
     end
 
-    always @(*) begin
+    always @(posedge clk_166M66) begin
         case (curr_state)
             IDLE: begin
                 if (i_dsc_requesting && i_l2_requesting && !i_dsc_rw)
@@ -93,7 +94,7 @@ module mba (
                 else if (!i_dsc_requesting && i_l2_requesting && i_l2_rw)
                     next_state = NR_L2_WRITING;
                 else
-                    next_state = L2_READING;
+                    next_state = NR_IDLE;
             end
             L2_WRITING: begin
                 if (i_dsc_requesting && i_l2_requesting && !i_dsc_rw)
@@ -109,7 +110,7 @@ module mba (
                 else if (!i_dsc_requesting && i_l2_requesting && i_l2_rw)
                     next_state = L2_WRITING;
                 else
-                    next_state = L2_WRITING;
+                    next_state = NR_IDLE;
             end
             DSC_READING: begin
                 if (i_dsc_requesting && i_l2_requesting && !i_dsc_rw)
@@ -125,7 +126,7 @@ module mba (
                 else if (!i_dsc_requesting && i_l2_requesting && i_l2_rw)
                     next_state = NR_L2_WRITING;
                 else
-                    next_state = DSC_READING;
+                    next_state = NR_IDLE;
             end
             DSC_WRITING: begin
                 if (i_dsc_requesting && i_l2_requesting && !i_dsc_rw)
@@ -141,7 +142,7 @@ module mba (
                 else if (!i_dsc_requesting && i_l2_requesting && i_l2_rw)
                     next_state = NR_L2_WRITING;
                 else
-                    next_state = DSC_WRITING;
+                    next_state = NR_IDLE;
             end
             NR_DSC_READING: begin
                 if (counter == 2'h3)
@@ -158,6 +159,10 @@ module mba (
             NR_L2_WRITING: begin
                 if (counter == 2'h3)
                     next_state = L2_WRITING;
+            end
+            NR_IDLE: begin
+              if (counter == 2'h3)
+                next_state = IDLE;
             end
             default: next_state = IDLE; // error
         endcase
@@ -228,6 +233,13 @@ module mba (
                 io_en = 1'b0;
                 counting = 1'b1;
             end
+            NR_IDLE: begin
+                l2_allow = l2_allow;
+                dsc_allow = dsc_allow;
+                rw = rw;
+                io_en = io_en;
+                counting = counting;
+            end
         endcase
     end
 
@@ -246,6 +258,7 @@ module mba (
                 NR_L2_WRITING: dbg_curr_state = "NR_L2_WRITING";
                 NR_DSC_READING: dbg_curr_state = "NR_DSC_READING";
                 NR_DSC_WRITING: dbg_curr_state = "NR_DSC_WRITING";
+                NR_IDLE: dbg_curr_state = "NR_IDLE";
             endcase
         end
 
@@ -260,6 +273,7 @@ module mba (
                 NR_L2_WRITING: dbg_next_state = "NR_L2_WRITING";
                 NR_DSC_READING: dbg_next_state = "NR_DSC_READING";
                 NR_DSC_WRITING: dbg_next_state = "NR_DSC_WRITING";
+                NR_IDLE: dbg_next_state = "NR_IDLE";
             endcase
         end
 

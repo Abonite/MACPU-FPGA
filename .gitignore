@@ -5,3 +5,6 @@ sim_build/
 sim/*/*/*.v
 *.ini
 transcript
+*.pyc
+*.xml
+*.vcd
