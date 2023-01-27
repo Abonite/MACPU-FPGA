@@ -146,4 +146,3 @@ async def test_multy_request(dut):
         assert dut.o_data_bus_enable == data_en
         assert dut.o_l2_allow == l2_allow
         assert dut.o_dsc_allow == dsc_allow
-        

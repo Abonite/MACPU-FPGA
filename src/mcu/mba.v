@@ -12,6 +12,8 @@ module mba (
     output  o_data_bus_rw,
     output  o_data_bus_enable,
 
+    input   i_status_bus_transmitting,
+
     input   i_l2_requesting,
     input   i_l2_rw,
     output  o_l2_allow,
@@ -55,14 +57,13 @@ module mba (
         NR_IDLE        = 4'h9;
 
     always @(posedge clk_166M66 or mcu_sys_rst_n) begin
-        if (!mcu_sys_rst_n) begin
+        if (!mcu_sys_rst_n)
             curr_state <= IDLE;
-            next_state <= IDLE;
-        end else
+        else
             curr_state <= next_state;
     end
 
-    always @(posedge clk_166M66) begin
+    always @(*) begin
         case (curr_state)
             IDLE: begin
                 if (i_dsc_requesting && i_l2_requesting && !i_dsc_rw)
@@ -147,22 +148,42 @@ module mba (
             NR_DSC_READING: begin
                 if (counter == 2'h3)
                     next_state = DSC_READING;
+                else if(!i_status_bus_transmitting)
+                    next_state = DSC_READING;
+                else
+                    next_state = NR_DSC_READING;
             end
             NR_DSC_WRITING: begin
                 if (counter == 2'h3)
                     next_state = DSC_WRITING;
+                else if(!i_status_bus_transmitting)
+                    next_state = DSC_WRITING;
+                else
+                    next_state = NR_DSC_WRITING;
             end
             NR_L2_READING: begin
                 if (counter == 2'h3)
                     next_state = L2_READING;
+                else if(!i_status_bus_transmitting)
+                    next_state = L2_READING;
+                else
+                    next_state = NR_L2_READING;
             end
             NR_L2_WRITING: begin
                 if (counter == 2'h3)
                     next_state = L2_WRITING;
+                else if(!i_status_bus_transmitting)
+                    next_state = L2_WRITING;
+                else
+                    next_state = NR_L2_WRITING;
             end
             NR_IDLE: begin
-              if (counter == 2'h3)
-                next_state = IDLE;
+                if (counter == 2'h3)
+                    next_state = IDLE;
+                else if(!i_status_bus_transmitting)
+                    next_state = IDLE;
+                else
+                    next_state = NR_IDLE;
             end
             default: next_state = IDLE; // error
         endcase
