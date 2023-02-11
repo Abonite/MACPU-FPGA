@@ -12,7 +12,7 @@ This is a personal contact project. Continuously updating.
 
 ## ISA
 
-You can read the detailed ISA design document here.
+[You can read the detailed ISA design document here.](https://github.com/Abonite/MACPU-FPGA/blob/32bit/instructions.md)
 
 ## Some coding rules
 
