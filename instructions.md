@@ -54,7 +54,11 @@ In MACPU ISA, we have 41 registers, they are:
 
 All instructions supported by the MACPU are listed below.
 
+---
+
 ### Memory Operations
+
+A total of six instructions
 
 ---
 
@@ -98,6 +102,8 @@ Write32bit immediate value and load it into the specified register
 
 ### Register Operations
 
+A total of one instruction
+
 ---
 
 #### MOVE
@@ -111,6 +117,8 @@ Move the value of one register to another register
 ### Integer Operations
 
 Subject to the specific logic implementation required for the execution of each instruction, although the following arithmetic instructions are classified as integer operations, they will be assigned to different arithmetic unit implementations
+
+A total of fifteen instructions
 
 ---
 
@@ -208,6 +216,8 @@ Left circular shift register %r1, the number of bits shifted is recorded in %r2,
 
 ### Branch Operations
 
+A total of five instructions
+
 ---
 
 #### GT
@@ -244,6 +254,8 @@ If %r1 is less or equal to %r2 or immediate number, the %rrslt will be set to 1,
 
 ### Jump Operations
 
+A total of three instructions
+
 ---
 
 #### JMP
@@ -267,6 +279,8 @@ Jump to the specified address when the value of the register %r is 0
 ---
 
 ### Interrupt Operations
+
+A total of one instructions
 
 ---
 
