@@ -4,50 +4,50 @@
 
 In MACPU ISA, we have 42 registers, they are:
 
-| Register name | Bit width | Attributes                                                   | general purpose                                              |
-| ------------- | --------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| %PC           | 32        | Program counter. It can only be assigned when a branch instruction is triggered, but it can be read at any time. | Indicates the address currently being read                   |
-| %ZERO | 32 | Hardware zero. | Same as RISCV |
-| %A1           | 32        | General purpose register.                                    |                                                              |
-| %A2           | 32        | General purpose register.                                    |                                                              |
-| %A3           | 32        | General purpose register.                                    |                                                              |
-| %A4           | 32        | General purpose register.                                    |                                                              |
-| %AR1          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %AR2          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %AR3          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %ASS          | 32        | General purpose register.                                    | Can be used to indicate the current stack segment base address |
-| %ASP          | 32        | General purpose register.                                    | Can be used to indicate the current stack pointer            |
-| %ADS          | 32        | General purpose register.                                    | Can be used to indicate the current address segment base address |
-| %B1           | 32        | General purpose register.                                    |                                                              |
-| %B2           | 32        | General purpose register.                                    |                                                              |
-| %B3           | 32        | General purpose register.                                    |                                                              |
-| %B4           | 32        | General purpose register.                                    |                                                              |
-| %BR1          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %BR2          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %BR3          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %BSS          | 32        | General purpose register.                                    | Can be used to indicate the current stack segment base address |
-| %BSP          | 32        | General purpose register.                                    | Can be used to indicate the current stack pointer            |
-| %BDS          | 32        | General purpose register.                                    | Can be used to indicate the current address segment base address |
-| %C1           | 32        | General purpose register.                                    |                                                              |
-| %C2           | 32        | General purpose register.                                    |                                                              |
-| %C3           | 32        | General purpose register.                                    |                                                              |
-| %C4           | 32        | General purpose register.                                    |                                                              |
-| %CR1          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %CR2          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %CR3          | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %CSS          | 32        | General purpose register.                                    | Can be used to indicate the current stack segment base address |
-| %CSP          | 32        | General purpose register.                                    | Can be used to indicate the current stack pointer            |
-| %CDS          | 32        | General purpose register.                                    | Can be used to indicate the current address segment base address |
-| %D1          | 32        | General purpose register.                                    |                                                              |
-| %D2          | 32        | General purpose register.                                    |                                                              |
-| %D3          | 32        | General purpose register.                                    |                                                              |
-| %D4          | 32        | General purpose register.                                    |                                                              |
-| %DR1         | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %DR2         | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %DR3         | 32        | General purpose register.                                    | Can be used to store return values                           |
-| %DSS         | 32        | General purpose register.                                    | Can be used to indicate the current stack segment base address |
-| %DSP         | 32        | General purpose register.                                    | Can be used to indicate the current stack pointer            |
-| %DDS         | 32        | General purpose register.                                    | Can be used to indicate the current address segment base address |
+| Register name | Bit width | Label | Attributes                                                   | general purpose                                              |
+| ------------- | --------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| %PC           | 32        | 10 1001 | Program counter. It can only be assigned when a branch instruction is triggered, but it can be read at any time. | Indicates the address currently being read                   |
+| %ZERO | 32 | 00 0000 | Hardware zero. | Same as RISCV |
+| %A1           | 32        | 00 0001 | General purpose register.                                    |                                                              |
+| %A2           | 32        | 00 0010 | General purpose register.                                    |                                                              |
+| %A3           | 32        | 00 0011 | General purpose register.                                    |                                                              |
+| %A4           | 32        | 00 0100 | General purpose register.                                    |                                                              |
+| %AR1          | 32        | 00 0101 | General purpose register.                                    | Can be used to store return values                           |
+| %AR2          | 32        | 00 0110 | General purpose register.                                    | Can be used to store return values                           |
+| %AR3          | 32        | 00 0111 | General purpose register.                                    | Can be used to store return values                           |
+| %ASS          | 32        | 00 1000 | General purpose register.                                    | Can be used to indicate the current stack segment base address |
+| %ASP          | 32        | 00 1001 | General purpose register.                                    | Can be used to indicate the current stack pointer            |
+| %ADS          | 32        | 00 1010 | General purpose register.                                    | Can be used to indicate the current address segment base address |
+| %B1           | 32        | 00 1011 | General purpose register.                                    |                                                              |
+| %B2           | 32        | 00 1100 | General purpose register.                                    |                                                              |
+| %B3           | 32        | 00 1101 | General purpose register.                                    |                                                              |
+| %B4           | 32        | 00 1110 | General purpose register.                                    |                                                              |
+| %BR1          | 32        | 00 1111 | General purpose register.                                    | Can be used to store return values                           |
+| %BR2          | 32        | 01 0000 | General purpose register.                                    | Can be used to store return values                           |
+| %BR3          | 32        | 01 0001 | General purpose register.                                    | Can be used to store return values                           |
+| %BSS          | 32        | 01 0010 | General purpose register.                                    | Can be used to indicate the current stack segment base address |
+| %BSP          | 32        | 01 0011 | General purpose register.                                    | Can be used to indicate the current stack pointer            |
+| %BDS          | 32        | 01 0100 | General purpose register.                                    | Can be used to indicate the current address segment base address |
+| %C1           | 32        | 01 0101 | General purpose register.                                    |                                                              |
+| %C2           | 32        | 01 0110 | General purpose register.                                    |                                                              |
+| %C3           | 32        | 01 0111 | General purpose register.                                    |                                                              |
+| %C4           | 32        | 01 1000 | General purpose register.                                    |                                                              |
+| %CR1          | 32        | 01 1001 | General purpose register.                                    | Can be used to store return values                           |
+| %CR2          | 32        | 01 1010 | General purpose register.                                    | Can be used to store return values                           |
+| %CR3          | 32        | 01 1011 | General purpose register.                                    | Can be used to store return values                           |
+| %CSS          | 32        | 01 1100 | General purpose register.                                    | Can be used to indicate the current stack segment base address |
+| %CSP          | 32        | 01 1101 | General purpose register.                                    | Can be used to indicate the current stack pointer            |
+| %CDS          | 32        | 01 1110 | General purpose register.                                    | Can be used to indicate the current address segment base address |
+| %D1          | 32        | 01 1111 | General purpose register.                                    |                                                              |
+| %D2          | 32        | 10 0000 | General purpose register.                                    |                                                              |
+| %D3          | 32        | 10 0001 | General purpose register.                                    |                                                              |
+| %D4          | 32        | 10 0010 | General purpose register.                                    |                                                              |
+| %DR1         | 32        | 10 0011 | General purpose register.                                    | Can be used to store return values                           |
+| %DR2         | 32        | 10 0100 | General purpose register.                                    | Can be used to store return values                           |
+| %DR3         | 32        | 10 0101 | General purpose register.                                    | Can be used to store return values                           |
+| %DSS         | 32        | 10 0110 | General purpose register.                                    | Can be used to indicate the current stack segment base address |
+| %DSP         | 32        | 10 0111 | General purpose register.                                    | Can be used to indicate the current stack pointer            |
+| %DDS         | 32        | 10 1000 | General purpose register.                                    | Can be used to indicate the current address segment base address |
 
 
 
@@ -176,15 +176,15 @@ Integer add, if an immediate value is used in an instruction, some computational
 
 #### SUB
 
-**SUB %r1, %r2, %rrslt / SUB %r, immediate number, %rrslt / SUB immediate number, %r, %rrslt**
+**SUB %r, %r1, %rrslt / SUB %r, immediate number, %rrslt / SUB immediate number, %r, %rrslt**
 
 Integer subtraction, if an immediate value is used in an instruction, some computational precision may be lost
 
-| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r1, 6bit) | (6bit)                                        | Code                             | Example            |
-| --------------- | ------------------------------ | --------------------- | --------------------------- | --------------------------------------------- | -------------------------------- | ------------------ |
-| 10 0000 0010    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001           | Source register 1 [5 - 0] (00 0000 - 10 1001) | SUB %r, %r1, %rrslt              | SUB %A1, %A2, %A3  |
-| 10 0000 0011    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001           | immediate number[5-0]                         | SUB %r, immediate number, %rrslt | SUB %A1, 0x3F, %A2 |
-| 10 0000 0100    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001           | immediate number[5-0]                         | SUB immediate number, %r, %rrslt | SUB 0b11, %A1, %A2 |
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                             | Example            |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | -------------------------------- | ------------------ |
+| 10 0000 0010    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | SUB %r, %r1, %rrslt              | SUB %A1, %A2, %A3  |
+| 10 0000 0011    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | SUB %r, immediate number, %rrslt | SUB %A1, 0x3F, %A2 |
+| 10 0000 0100    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | SUB immediate number, %r, %rrslt | SUB 0b11, %A1, %A2 |
 
 #### BAND
 
@@ -262,39 +262,78 @@ Bitwise XOR
 
 #### MUL
 
-**MUL %r1, %r2, %rrslt / MUL %r, immediate number, %rrslt**
+**MUL %r, %r1, %rrslt / MUL %r, immediate number, %rrslt**
 
 Integer multiplication, if an immediate value is used in an instruction, some computational precision may be lost
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                             | Example            |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | -------------------------------- | ------------------ |
+| 10 0000 1111    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | MUL %r, %r1, %rrslt              | MUL %A1, %A2, %A3  |
+| 10 0001 0000    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | MUL %r, immediate number, %rrslt | MUL %A1, 0x3F, %A2 |
+
 #### DIV
 
-**DIV %r1, %r2, %rrslt / DIV %r, immediate number, %rrslt**
+**DIV %r, %r1, %rrslt / DIV %r, immediate number, %rrslt/ DIV immediate number, %r, %rrslt**
 
 Integer division, if an immediate value is used in an instruction, some computational precision may be lost
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                             | Example            |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | -------------------------------- | ------------------ |
+| 10 0001 0001    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | DIV %r, %r1, %rrslt              | DIV %A1, %A2, %A3  |
+| 10 0001 0010    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | DIV %r, immediate number, %rrslt | DIV %A1, 0x3F, %A2 |
+| 10 0001 0011    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | DIV immediate number, %r, %rrslt | DIV 0b11, %A1, %A2 |
+
 #### LS
 
-**SL %r1, %r2, %rrslt / SL %r, immediate number, %rrslt**
+**SL %r, %r1, %rrslt / SL %r, immediate number, %rrslt / SL immediate number, %r, %rrslt / SL immediate number 1, immediate number 2, %rrslt**
 
 Left shift register %r1, the number of bits shifted is recorded in %r2, or directly pointed out by the immediate number, low bit fill zero
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (16bit)                                                      | Code                                              | Example           |
+| --------------- | ------------------------------ | ------------------------------------------------------------ | ------------------------------------------------- | ----------------- |
+| 10 0001 0100    | 00 0001 - 10 1000              | 0000 {Source register [5 - 0]} {Source register 1 [5 - 0]}   | SL %r, %r1, %rrslt                                | SL %A1, %A2, %A3  |
+| 10 0001 0101    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | SL %r, immediate number, %rrslt                   | SL %A1, 0x3F, %A2 |
+| 10 0001 0110    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | SL immediate number, %r, %rrslt                   | SL 0b11, %A1, %A2 |
+| 10 0001 0111    | 00 0001 - 10 1000              | {immediate number 1 [9-0]}{immediate number 2 [5-0]}         | SL immediate number 1, immediate number 2, %rrslt | SL 1024, 3, %A1   |
+
 #### LRS
 
-**LRS %r1, %r2, %rrslt / LRS %r, immediate number, %rrslt**
+**LRS %r, %r1, %rrslt / LRS %r, immediate number, %rrslt / LRS immediate number, %r, %rrslt / LRS immediate number 1, immediate number 2, %rrslt**
 
 Logic right shift register %r1, the number of bits shifted is recorded in %r2, or directly pointed out by the immediate number, high bit fill zero
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (16bit)                                                      | Code                                               | Example            |
+| --------------- | ------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- | ------------------ |
+| 10 0001 1000    | 00 0001 - 10 1000              | 0000 {Source register [5 - 0]} {Source register 1 [5 - 0]}   | LRS %r, %r1, %rrslt                                | LRS %A1, %A2, %A3  |
+| 10 0001 1001    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | LRS %r, immediate number, %rrslt                   | LRS %A1, 0x3F, %A2 |
+| 10 0001 1010    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | LRS immediate number, %r, %rrslt                   | LRS 0b11, %A1, %A2 |
+| 10 0001 1011    | 00 0001 - 10 1000              | {immediate number 1 [9-0]}{immediate number 2 [5-0]}         | LRS immediate number 1, immediate number 2, %rrslt | LRS 1024, 3, %A1   |
+
 #### ARS
 
-**ARS %r1, %r2, %rrslt / ARS %r, immediate number, %rrslt**
+**ARS %r, %r1, %rrslt / ARS %r, immediate number, %rrslt / ARS immediate number, %r, %rrslt / ARS immediate number 1, immediate number 2, %rrslt**
 
 Algorithm right shift register %r1, the number of bits shifted is recorded in %r2, or directly pointed out by the immediate number, high bit complements the same number as the sign bit
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (16bit)                                                      | Code                                               | Example            |
+| --------------- | ------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- | ------------------ |
+| 10 0001 1100    | 00 0001 - 10 1000              | 0000 {Source register [5 - 0]} {Source register 1 [5 - 0]}   | ARS %r, %r1, %rrslt                                | ARS %A1, %A2, %A3  |
+| 10 0001 1101    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | ARS %r, immediate number, %rrslt                   | ARS %A1, 0x3F, %A2 |
+| 10 0001 1110    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | ARS immediate number, %r, %rrslt                   | ARS 0b11, %A1, %A2 |
+| 10 0001 1111    | 00 0001 - 10 1000              | {immediate number 1 [9-0]}{immediate number 2 [5-0]}         | ARS immediate number 1, immediate number 2, %rrslt | ARS 1024, 3, %A1   |
+
 #### LCS
 
-**LCS %r1, %r2, %rrslt / LCS %r, immediate number, %rrslt**
+**LCS %r, %r1, %rrslt / LCS %r, immediate number, %rrslt / LCS immediate number, %r, %rrslt / LCS immediate number 1, immediate number 2, %rrslt**
 
 Left circular shift register %r1, the number of bits shifted is recorded in %r2, or directly pointed out by the immediate number
+
+| OP code (10bit) | Target register (%rrslt, 6bit) | (16bit)                                                      | Code                                               | Example            |
+| --------------- | ------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- | ------------------ |
+| 10 0010 0000    | 00 0001 - 10 1000              | 0000 {Source register [5 - 0]} {Source register 1 [5 - 0]}   | LCS %r, %r1, %rrslt                                | LCS %A1, %A2, %A3  |
+| 10 0010 0001    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | LCS %r, immediate number, %rrslt                   | LCS %A1, 0x3F, %A2 |
+| 10 0010 0010    | 00 0001 - 10 1000              | immediate number[9-6] {Source register [5 - 0]} immediate number[5-0] | LCS immediate number, %r, %rrslt                   | LCS 0b11, %A1, %A2 |
+| 10 0010 0011    | 00 0001 - 10 1000              | {immediate number 1 [9-0]}{immediate number 2 [5-0]}         | LCS immediate number 1, immediate number 2, %rrslt | LCS 1024, 3, %A1   |
 
 ---
 
@@ -306,33 +345,58 @@ A total of five instructions
 
 #### GT
 
-**GT %r1, %r2, %rrslt / GT %r, immediate number, %rrslt**
+**GT %r, %r1, %rrslt / GT %r, immediate number, %rrslt**
 
 If %r1 is greater than %r2 or immediate number, the %rrslt will be set to 1, otherwise 0
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                            | Example           |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | ------------------------------- | ----------------- |
+| 10 0100 0000    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | GT %r, %r1, %rrslt              | GT %A1, %A2, %A3  |
+| 10 0100 0001    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | GT %r, immediate number, %rrslt | GT %A1, 0x3F, %A2 |
+
 #### EQ
 
-**EQ %r1, %r2, %rrslt / EQ %r, immediate number, %rrslt**
+**EQ %r, %r1, %rrslt / EQ %r, immediate number, %rrslt**
 
 If %r1 is equal to %r2 or immediate number, the %rrslt will be set to 1, otherwise 0
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                            | Example           |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | ------------------------------- | ----------------- |
+| 10 0100 0010    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | EQ %r, %r1, %rrslt              | EQ %A1, %A2, %A3  |
+| 10 0100 0011    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | EQ %r, immediate number, %rrslt | EQ %A1, 0x3F, %A2 |
+
 #### LT
 
-**LT %r1, %r2, %rrslt / LT %r, immediate number, %rrslt**
+**LT %r, %r1, %rrslt / LT %r, immediate number, %rrslt**
 
 If %r1 is less than %r2 or immediate number, the %rrskt will be set to 1, otherwise 0
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                            | Example           |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | ------------------------------- | ----------------- |
+| 10 0100 0100    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | LT %r, %r1, %rrslt              | LT %A1, %A2, %A3  |
+| 10 0100 0101    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | LT %r, immediate number, %rrslt | LT %A1, 0x3F, %A2 |
+
 #### GTE
 
-**GTE %r1, %r2, %rrslt / GTE %r, immediate number, %rrslt**
+**GTE %r, %r1, %rrslt / GTE %r, immediate number, %rrslt**
 
 If %r1 is greater or equal to %r2 or immediate number, the %rrslt will be set to 1, otherwise 0
 
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                             | Example            |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | -------------------------------- | ------------------ |
+| 10 0100 0110    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | GTE %r, %r1, %rrslt              | GTE %A1, %A2, %A3  |
+| 10 0100 0111    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | GTE %r, immediate number, %rrslt | GTE %A1, 0x3F, %A2 |
+
 #### LTE
 
-**LTE %r1, %r2, %rrslt / LTE %r, immediate number, %rrslt**
+**LTE %r, %r1, %rrslt / LTE %r, immediate number, %rrslt**
 
 If %r1 is less or equal to %r2 or immediate number, the %rrslt will be set to 1, otherwise 0
+
+| OP code (10bit) | Target register (%rrslt, 6bit) | (4bit)                | Source register (%r, 6bit) | (6bit)                                        | Code                             | Example            |
+| --------------- | ------------------------------ | --------------------- | -------------------------- | --------------------------------------------- | -------------------------------- | ------------------ |
+| 10 0100 1000    | 00 0001 - 10 1000              | 0000                  | 00 0000 - 10 1001          | Source register 1 [5 - 0] (00 0000 - 10 1001) | LTE %r, %r1, %rrslt              | LTE %A1, %A2, %A3  |
+| 10 0100 1001    | 00 0001 - 10 1000              | immediate number[9-6] | 00 0000 - 10 1001          | immediate number[5-0]                         | LTE %r, immediate number, %rrslt | LTE %A1, 0x3F, %A2 |
 
 ---
 
@@ -348,17 +412,32 @@ A total of three instructions
 
 Unconditionally jump to the specified instruction
 
+| OP code (10bit) | (22bit)                                                | Code                           | Example                    |
+| --------------- | ------------------------------------------------------ | ------------------------------ | -------------------------- |
+| 11 0000 0000    | immediate number[21-0]                                 | JMP [immediate number address] | JMP [223]; JMP LABEL       |
+| 11 0000 0001    | 00 0000 0000 {register 1 [5 - 0]} {register 2 [5 - 0]} | JMP [%r1 (+ %r2)]              | JMP [%PC + %A2]; JMP [%A1] |
+
 #### OJMP
 
 **OJMP %r, [immediate number address] / OJMP %r, [%r1 (+ %r2)]**
 
 Jump to the specified address when the value of the register %r is 1
 
+| OP code (10bit) | (22bit)                                                | Code                            | Example                     |
+| --------------- | ------------------------------------------------------ | ------------------------------- | --------------------------- |
+| 11 0000 0010    | immediate number[21-0]                                 | OJMP [immediate number address] | OJMP [223]; JMP LABEL       |
+| 11 0000 0011    | 00 0000 0000 {register 1 [5 - 0]} {register 2 [5 - 0]} | OJMP [%r1 (+ %r2)]              | OJMP [%PC + %A2]; JMP [%A1] |
+
 #### ZJMP
 
 **ZJMP %r, [immediate number address] / ZJMP %r, [%r1 (+ %r2)]**
 
 Jump to the specified address when the value of the register %r is 0
+
+| OP code (10bit) | (22bit)                                                | Code                            | Example                     |
+| --------------- | ------------------------------------------------------ | ------------------------------- | --------------------------- |
+| 11 0000 0100    | immediate number[21-0]                                 | ZJMP [immediate number address] | ZJMP [223]; JMP LABEL       |
+| 11 0000 0101    | 00 0000 0000 {register 1 [5 - 0]} {register 2 [5 - 0]} | ZJMP [%r1 (+ %r2)]              | ZJMP [%PC + %A2]; JMP [%A1] |
 
 ---
 
