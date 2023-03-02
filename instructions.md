@@ -117,10 +117,6 @@ Save the lowest 16bit data of the register to the specified address
 
 
 
-| OP code (10bit) | Source register (%r, 6bit) | Zero (4bit) | Target register 1 (%r1, 6bit) | Target register 2 (%r, 6bit) | Code                     | Example                                    |
-| --------------- | -------------------------- | ----------- | ----------------------------- | ---------------------------- | ------------------------ | ------------------------------------------ |
-| 00 0000 0110    | 00 0001 - 10 1000          | 0000        | 00 0001 - 10 1001             | 00 0000 - 10 1000            | STORE8 %r, [%r1 (+ %r2)] | STORE8 %A1, [%A2]; STORE8 %A1, [%A2 + %A3] |
-
 #### STORE32
 
 **STORE32 %r, [%r1 (+ %r2)]**
@@ -130,10 +126,6 @@ Save the 32bit data of the register to the specified address
 | OP code (10bit) | Source register (%r, 6bit) | (16bit)                                        | Code                      | Example                                      |
 | --------------- | -------------------------- | ---------------------------------------------- | ------------------------- | -------------------------------------------- |
 | 00 0000 1000    | 00 0001 - 10 1000          | 0000 {register 1 [5 - 0]} {register 2 [5 - 0]} | STORE32 %r, [%r1 (+ %r2)] | STORE32 %A1, [%A2]; STORE32 %A1, [%A2 + %A3] |
-
-| OP code (10bit) | Source register (%r, 6bit) | Zero (4bit) | Target register 1 (%r1, 6bit) | Target register 2 (%r, 6bit) | Code                     | Example                                    |
-| --------------- | -------------------------- | ----------- | ----------------------------- | ---------------------------- | ------------------------ | ------------------------------------------ |
-| 00 0000 0110    | 00 0001 - 10 1000          | 0000        | 00 0001 - 10 1001             | 00 0000 - 10 1000            | STORE8 %r, [%r1 (+ %r2)] | STORE8 %A1, [%A2]; STORE8 %A1, [%A2 + %A3] |
 
 ---
 
@@ -441,3 +433,20 @@ Jump to the specified address when the value of the register %r is 0
 
 ---
 
+### Others
+
+A total of one instructions
+
+---
+
+#### NOP
+
+**NOP**
+
+No Options
+
+| OP code (10bit) | (22bit)                     | Code | Example |
+| --------------- | --------------------------- | ---- | ------- |
+| 11 0000 0110    | 00 0000 0000 0000 0000 0000 | NOP  | NOP     |
+
+---
