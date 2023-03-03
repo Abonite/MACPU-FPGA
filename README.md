@@ -8,7 +8,7 @@ Verilog implementation of MACPU
 
 ## About
 
-This is a personal contact project. Continuously updating.
+This is a personal contact project. Continuously updating. For more information about the algorithm model of the CPU, you can check [here](https://github.com/Abonite/MACPU-model). About the assembler of the CPU, you can check [here](https://github.com/Abonite/MACPU-Assembler).
 
 ## ISA
 
